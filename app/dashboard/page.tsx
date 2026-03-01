@@ -7,8 +7,17 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        setUser(data.user)
+
+        // Guarda el usuario en la tabla users si no existe
+        await supabase.from('users').upsert({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name,
+        })
+      }
     })
   }, [])
 

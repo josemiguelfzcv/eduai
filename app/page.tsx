@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
       <h1>StudyAI 🎓</h1>
-      <p>Tu profesor de IA personalizado.</p>
+      <p> A class built for you.</p>
       <br />
       <button onClick={loginWithGoogle} style={{
         padding: "12px 24px",

@@ -13,20 +13,43 @@ export default function Home() {
   }
 
   return (
-    <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
-      <h1>StudyAI 🎓</h1>
-      <p> A class built for you.</p>
-      <br />
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "40px",
+      textAlign: "center"
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #4285F4, #34a853)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        fontSize: "3.5rem",
+        fontWeight: 800,
+        marginBottom: "16px"
+      }}>
+        StudyAI
+      </div>
+      <p style={{ fontSize: "1.1rem", marginBottom: "8px", color: "#8b92a5" }}>
+        El profesor que aprende cómo aprendes tú
+      </p>
+      <p style={{ fontSize: "0.9rem", marginBottom: "40px", color: "#555e7a", maxWidth: "400px" }}>
+        Sube tus apuntes, slides y grabaciones — recibe una clase personalizada con IA
+      </p>
       <button onClick={loginWithGoogle} style={{
-        padding: "12px 24px",
-        fontSize: "16px",
-        background: "#4285F4",
+        padding: "14px 32px",
+        background: "linear-gradient(135deg, #4285F4, #34a853)",
         color: "white",
         border: "none",
-        borderRadius: "8px",
-        cursor: "pointer"
+        borderRadius: "12px",
+        fontSize: "1rem",
+        fontWeight: 700,
+        cursor: "pointer",
+        boxShadow: "0 4px 24px rgba(66,133,244,0.3)"
       }}>
-        Sign in with Google
+        Entrar con Google →
       </button>
     </div>
   )

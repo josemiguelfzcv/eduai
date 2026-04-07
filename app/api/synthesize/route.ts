@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, courseTitle } = await req.json()
+    const { text, courseTitle, userId, courseId } = await req.json()
 
     const { text: responseText } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
@@ -42,6 +48,14 @@ Responde SOLO con el JSON, sin texto adicional ni backticks.`
       .trim()
 
     const script = JSON.parse(cleaned)
+
+    // Guarda el script en Supabase
+    if (courseId) {
+      await supabase
+        .from('courses')
+        .update({ script: script, status: 'ready' })
+        .eq('id', courseId)
+    }
 
     return NextResponse.json({ success: true, script })
 

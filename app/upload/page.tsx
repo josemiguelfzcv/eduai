@@ -44,10 +44,10 @@ export default function Upload() {
     setStatus('🧠 Generando tu clase personalizada con IA...')
 
     const scriptResponse = await fetch('/api/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: data.text, courseTitle })
-    })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text: data.text, courseTitle, userId, courseId: data.courseId })
+})
 
     const scriptData = await scriptResponse.json()
     setScript(scriptData.script)

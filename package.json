@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.66",
     "@supabase/supabase-js": "^2.98.0",
     "@uploadthing/react": "^7.3.3",
+    "ai": "^6.0.145",
     "next": "16.1.6",
     "openai": "^6.33.0",
     "pdf-parse": "^2.4.5",

@@ -14,6 +14,8 @@ export default function Upload() {
   const [userId, setUserId] = useState<string | null>(null)
   const [courseTitle, setCourseTitle] = useState('')
   const [script, setScript] = useState<any>(null)
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const [courseId, setCourseId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -40,19 +42,36 @@ export default function Upload() {
 
     const data = await response.json()
     setExtractedText(data.text)
+    setCourseId(data.courseId)
 
     setStatus('🧠 Generando tu clase personalizada con IA...')
 
     const scriptResponse = await fetch('/api/synthesize', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ text: data.text, courseTitle, userId, courseId: data.courseId })
-})
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: data.text, courseTitle, userId, courseId: data.courseId })
+    })
 
     const scriptData = await scriptResponse.json()
     setScript(scriptData.script)
     setLoading(false)
     setStatus('✅ ¡Tu clase está lista!')
+  }
+
+  const playNarration = async (text: string, index: number) => {
+    setPlayingIndex(index)
+    const res = await fetch('/api/text-to-speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        segmentId: `course-${courseId}-seg-${index}`
+      })
+    })
+    const data = await res.json()
+    const audio = new Audio(data.url)
+    audio.play()
+    audio.onended = () => setPlayingIndex(null)
   }
 
   return (
@@ -128,6 +147,22 @@ export default function Upload() {
               <p style={{ fontSize: "0.8rem", color: "#22d98a", marginTop: "8px" }}>
                 ❓ {seg.pregunta_check}
               </p>
+              <button
+                onClick={() => playNarration(seg.narracion, i)}
+                disabled={playingIndex !== null}
+                style={{
+                  marginTop: "12px",
+                  padding: "8px 16px",
+                  background: playingIndex === i ? "#1a1f2e" : "#4285F4",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: playingIndex !== null ? "not-allowed" : "pointer",
+                  fontSize: "0.8rem"
+                }}
+              >
+                {playingIndex === i ? "🔊 Reproduciendo..." : "🔊 Escuchar narración"}
+              </button>
             </div>
           ))}
         </div>

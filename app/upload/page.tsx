@@ -54,8 +54,13 @@ export default function Upload() {
 
     const scriptData = await scriptResponse.json()
     setScript(scriptData.script)
-    setLoading(false)
-    setStatus('✅ ¡Tu clase está lista!')
+setLoading(false)
+setStatus('✅ ¡Tu clase está lista!')
+
+// Redirige a la página de clase
+setTimeout(() => {
+  window.location.href = `/class/${data.courseId}`
+}, 1500)
   }
 
   const playNarration = async (text: string, index: number) => {
@@ -112,8 +117,67 @@ export default function Upload() {
       />
 
       {loading && (
-        <p style={{ marginTop: "24px", color: "#4285F4" }}>{status}</p>
-      )}
+  <div style={{ marginTop: "32px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+      <div style={{
+        width: "20px", height: "20px",
+        border: "2px solid #252a38",
+        borderTop: "2px solid #4285F4",
+        borderRadius: "50%",
+        animation: "spin 0.8s linear infinite",
+        flexShrink: 0
+      }} />
+      <p style={{ color: "#4285F4", fontWeight: 600 }}>{status}</p>
+    </div>
+
+    <div style={{
+      background: "#181c26",
+      borderRadius: "12px",
+      border: "1px solid #252a38",
+      padding: "20px 24px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "14px"
+    }}>
+      {[
+        { label: "📄 Extrayendo texto del PDF", done: status.includes('Generando') || status.includes('lista') },
+        { label: "🧠 Generando script con Claude", done: status.includes('lista') },
+        { label: "✅ Clase lista", done: false }
+      ].map((step, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "20px", height: "20px",
+            borderRadius: "50%",
+            background: step.done ? "#22d98a" : "#252a38",
+            border: step.done ? "none" : "1px solid #363d52",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            fontSize: "0.65rem",
+            color: "white",
+            fontWeight: 700
+          }}>
+            {step.done ? "✓" : ""}
+          </div>
+          <p style={{
+            fontSize: "0.85rem",
+            color: step.done ? "#22d98a" : "#8b92a5"
+          }}>
+            {step.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+<style>{`
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`}</style>
 
       {script && (
         <div style={{

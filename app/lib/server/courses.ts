@@ -2,7 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { HttpError } from './auth'
 import { normalizeLesson } from '../lesson'
 
-export async function createCourse(db: SupabaseClient, userId: string, title: string, text: string) {
+/** Creates the lesson row. `academyCourseId` files it under one of the student's courses (already verified). */
+export async function createCourse(
+  db: SupabaseClient,
+  userId: string,
+  title: string,
+  text: string,
+  academyCourseId: number | null = null,
+) {
   const { data, error } = await db
     .from('courses')
     .insert({
@@ -10,6 +17,8 @@ export async function createCourse(db: SupabaseClient, userId: string, title: st
       title: title || 'Untitled lesson',
       description: text.slice(0, 500),
       status: 'extracted',
+      // Only send the column when it's used, so lessons can still be created before the My Academy migration.
+      ...(academyCourseId ? { academy_course_id: academyCourseId } : {}),
     })
     .select('id')
     .single()

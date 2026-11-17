@@ -90,7 +90,7 @@ const BENEFITS = [
   },
   {
     title: 'Your progress, at a glance',
-    body: 'See which concepts you’ve mastered and which need another pass.',
+    body: 'See which ideas you got right on the first try and which need another pass.',
     icon: (
       <path
         d="M3.5 23.5 11 16l5 5L28.5 8.5m0 0H21m7.5 0V16"

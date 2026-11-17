@@ -24,13 +24,17 @@ export async function POST(req: NextRequest) {
     if (error) throw error
 
     const bySegment = new Map<number, Attempt[]>()
-    for (const e of (data ?? []) as Attempt[]) bySegment.set(e.segment_index, [...(bySegment.get(e.segment_index) ?? []), e])
+    for (const e of (data ?? []) as Attempt[])
+      bySegment.set(e.segment_index, [...(bySegment.get(e.segment_index) ?? []), e])
 
     const missed = [...bySegment.entries()]
       .filter(([, attempts]) => !attempts[0].correct)
       .map(([index, attempts]) => ({
         segment: course.lesson!.segments[index],
-        wrongAnswers: attempts.filter((a) => !a.correct && a.answer).map((a) => a.answer!.slice(0, 300)).slice(-3),
+        wrongAnswers: attempts
+          .filter((a) => !a.correct && a.answer)
+          .map((a) => a.answer!.slice(0, 300))
+          .slice(-3),
       }))
       .filter((m) => m.segment)
       .slice(0, 4)
@@ -58,6 +62,18 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single()
     if (insertError) throw insertError
+
+    // Keep the review in the same My Academy course as its lesson. Best effort: before the
+    // My Academy migration the column doesn't exist, and the review simply has no course.
+    const { data: source } = await db
+      .from('courses')
+      .select('academy_course_id')
+      .eq('id', course.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (source?.academy_course_id) {
+      await db.from('courses').update({ academy_course_id: source.academy_course_id }).eq('id', created.id)
+    }
 
     return NextResponse.json({ courseId: created.id })
   } catch (err) {

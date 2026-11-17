@@ -14,6 +14,7 @@ export default function ClassPage() {
   const courseId = Number(params.id)
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'pending'>('loading')
+  const [startAt, setStartAt] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -25,6 +26,8 @@ export default function ClassPage() {
       .then(({ data }) => {
         const parsed = normalizeLesson(data?.script)
         if (parsed) {
+          const part = Number(new URLSearchParams(window.location.search).get('part'))
+          if (Number.isInteger(part) && part > 1) setStartAt(part - 1)
           setLesson(parsed)
           setState('ready')
         } else {
@@ -36,7 +39,9 @@ export default function ClassPage() {
   return (
     <AppShell>
       {state === 'loading' && <LoadingNote>Opening your lesson</LoadingNote>}
-      {state === 'ready' && lesson && <LessonPlayer key={courseId} lesson={lesson} courseId={courseId} />}
+      {state === 'ready' && lesson && (
+        <LessonPlayer key={courseId} lesson={lesson} courseId={courseId} startAt={startAt} />
+      )}
       {(state === 'missing' || state === 'pending') && (
         <div className="max-w-xl">
           <h1 className="text-[2rem]">
@@ -48,7 +53,7 @@ export default function ClassPage() {
               : 'Theo never finished writing it. Upload the material again to get a fresh lesson.'}
           </p>
           <Link href={state === 'missing' ? '/dashboard' : '/upload'} className="btn btn-primary mt-6 no-underline">
-            {state === 'missing' ? 'Back to my lessons' : 'Upload the material again'}
+            {state === 'missing' ? 'Back to My Academy' : 'Upload the material again'}
           </Link>
         </div>
       )}

@@ -1,11 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 import { generateReactHelpers } from '@uploadthing/react'
 import type { OurFileRouter } from '../api/uploadthing/route'
 import { AppShell, useRequiredUser } from '../components/AppShell'
-import { postJSON, supabase } from '../lib/supabase'
+import type { AcademyCourse } from '../lib/academy'
+import { getJSON, postJSON, supabase } from '../lib/supabase'
 
 const { useUploadThing } = generateReactHelpers<OurFileRouter>()
 
@@ -24,6 +26,19 @@ export default function Upload() {
   const [step, setStep] = useState<Step>('idle')
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  // null while loading; empty when the student has no courses (or My Academy isn't set up yet)
+  const [courses, setCourses] = useState<AcademyCourse[] | null>(null)
+  const [courseId, setCourseId] = useState('')
+
+  useEffect(() => {
+    getJSON<{ courses: AcademyCourse[] }>('/api/academy/courses')
+      .then(({ courses: list }) => {
+        setCourses(list)
+        const wanted = new URLSearchParams(window.location.search).get('course')
+        if (wanted && list.some((c) => String(c.id) === wanted)) setCourseId(wanted)
+      })
+      .catch(() => setCourses([]))
+  }, [])
 
   const { startUpload } = useUploadThing('materialUploader', {
     headers: async (): Promise<Record<string, string>> => {
@@ -39,6 +54,8 @@ export default function Upload() {
     const ok = isPdf(f) || f.type.startsWith('audio/')
     if (!ok) return setError('Lyceo reads PDFs and audio recordings. Export your slides as a PDF and try again.')
     if (f.size > 32 * 1024 * 1024) return setError('That file is over 32 MB. Try a smaller PDF or a shorter recording.')
+    if (!isPdf(f) && f.size > 25 * 1024 * 1024)
+      return setError('Recordings must be under 25 MB. Trim it or export it at a lower bitrate.')
     setFile(f)
     if (!title) setTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '))
   }
@@ -54,16 +71,16 @@ export default function Upload() {
       if (!fileUrl) throw new Error('The upload did not finish. Check your connection and try again.')
 
       setStep('read')
-      const { courseId, text } = await postJSON<{ courseId: number; text: string }>(
+      const { courseId: lessonId, text } = await postJSON<{ courseId: number; text: string }>(
         isPdf(file) ? '/api/extract-pdf' : '/api/transcribe',
-        { fileUrl, fileName: file.name, title: title.trim() },
+        { fileUrl, fileName: file.name, title: title.trim(), academyCourseId: courseId ? Number(courseId) : undefined },
       )
 
       setStep('write')
-      await postJSON('/api/synthesize', { courseId, text })
+      await postJSON('/api/synthesize', { courseId: lessonId, text })
 
       setStep('done')
-      router.push(`/class/${courseId}`)
+      router.push(`/class/${lessonId}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.')
       setStep('idle')
@@ -75,7 +92,11 @@ export default function Upload() {
   const steps: { id: Step; label: string; note?: string }[] = [
     { id: 'upload', label: 'Uploading', note: step === 'upload' ? `${Math.round(progress)}%` : undefined },
     { id: 'read', label: audio ? 'Transcribing the recording' : 'Reading the slides' },
-    { id: 'write', label: 'Theo is writing your lesson', note: step === 'write' ? 'usually 30 to 60 seconds' : undefined },
+    {
+      id: 'write',
+      label: 'Theo is writing your lesson',
+      note: step === 'write' ? 'usually 30 to 60 seconds' : undefined,
+    },
     { id: 'done', label: 'Opening your lesson' },
   ]
 
@@ -87,14 +108,46 @@ export default function Upload() {
       </p>
 
       <div className="mt-8 max-w-2xl space-y-6">
+        {courses && courses.length > 0 ? (
+          <div>
+            <label htmlFor="course" className="mb-2 block font-bold">
+              Course
+            </label>
+            <select
+              id="course"
+              className="field"
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              disabled={busy}
+            >
+              <option value="">No course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          courses && (
+            <p className="text-[0.92rem] text-ink-soft">
+              Tip: add your courses in{' '}
+              <Link href="/dashboard" className="text-forest underline underline-offset-4">
+                My Academy
+              </Link>{' '}
+              to group lessons and plan around exams.
+            </p>
+          )
+        )}
+
         <div>
           <label htmlFor="title" className="mb-2 block font-bold">
-            Which class is this?
+            Lesson title
           </label>
           <input
             id="title"
             className="field"
-            placeholder="Stat 161: Conditional probability"
+            placeholder="Conditional probability"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={busy}
@@ -132,7 +185,10 @@ export default function Upload() {
                 {audio ? 'Recording' : 'PDF'}, {(file.size / 1024 / 1024).toFixed(1)} MB
               </p>
               {!busy && (
-                <button className="mt-3 text-forest underline underline-offset-4" onClick={() => inputRef.current?.click()}>
+                <button
+                  className="mt-3 text-forest underline underline-offset-4"
+                  onClick={() => inputRef.current?.click()}
+                >
                   Choose a different file
                 </button>
               )}

@@ -22,9 +22,22 @@ type Result = { attempts: number; firstTryCorrect: boolean | null }
 
 const WORDS_PER_SECOND = 2.6
 
-export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesson; courseId?: number; demo?: boolean }) {
+export function LessonPlayer({
+  lesson,
+  courseId,
+  demo = false,
+  startAt = 0,
+}: {
+  lesson: Lesson
+  courseId?: number
+  demo?: boolean
+  /** 0-based part to pick up from (from My Academy's "Continue"). */
+  startAt?: number
+}) {
   const segments = lesson.segments
-  const [index, setIndex] = useState(0)
+  const [index, setIndex] = useState(() => Math.min(Math.max(0, startAt), lesson.segments.length - 1))
+  // Parts before this one were covered in an earlier session.
+  const [from, setFrom] = useState(index)
   const [phase, setPhase] = useState<Phase>('ready')
   const [revealed, setRevealed] = useState(0)
   const [boardOverride, setBoardOverride] = useState<string[] | null>(null)
@@ -145,7 +158,9 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
     const el = audioRef.current
     if (!el) return
     if (el.paused) {
-      el.play().then(() => setPhase('playing')).catch(() => {})
+      el.play()
+        .then(() => setPhase('playing'))
+        .catch(() => {})
     } else {
       el.pause()
       setPhase('paused')
@@ -211,7 +226,7 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
   }
 
   if (phase === 'done') {
-    return <Summary lesson={lesson} results={results} demo={demo} courseId={courseId} />
+    return <Summary lesson={lesson} results={results} from={from} demo={demo} courseId={courseId} />
   }
 
   const isLast = index === segments.length - 1
@@ -225,19 +240,41 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
         <p className="mt-2 text-ink-soft">
           Part {index + 1} of {segments.length}: <span className="font-medium text-ink">{segment.concept}</span>
         </p>
-        <Progress count={segments.length} index={index} results={results} />
+        <Progress count={segments.length} index={index} results={results} from={from} />
       </div>
 
       <div className="relative">
-        <Board lines={phase === 'ready' ? [] : boardLines} revealed={revealed} className="min-h-[300px] sm:min-h-[380px]">
+        <Board
+          lines={phase === 'ready' ? [] : boardLines}
+          revealed={revealed}
+          className="min-h-[300px] sm:min-h-[380px]"
+        >
           {phase === 'ready' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
               <p className="max-w-md font-chalk text-[1.7rem] leading-snug text-chalk">
-                {segments.length === 1 ? 'One part' : `${segments.length} parts`}, about {lesson.estimatedMinutes} minutes. Theo checks in after each one.
+                {segments.length === 1 ? 'One part' : `${segments.length} parts`}, about {lesson.estimatedMinutes}{' '}
+                minutes. Theo checks in after each one.
               </p>
-              <button className="btn btn-gold px-6 py-3 text-[1.05rem]" onClick={() => playSegment(0)} disabled={!urls}>
-                {urls ? 'Start the lesson' : 'Getting Theo ready'}
-              </button>
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  className="btn btn-gold px-6 py-3 text-[1.05rem]"
+                  onClick={() => playSegment(index)}
+                  disabled={!urls}
+                >
+                  {!urls ? 'Getting Theo ready' : index > 0 ? `Continue from part ${index + 1}` : 'Start the lesson'}
+                </button>
+                {index > 0 && urls && (
+                  <button
+                    className="btn border border-chalk/40 px-5 py-3 text-chalk hover:border-chalk/70"
+                    onClick={() => {
+                      setFrom(0)
+                      playSegment(0)
+                    }}
+                  >
+                    Start from the beginning
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </Board>
@@ -403,13 +440,42 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
   )
 }
 
-function Progress({ count, index, results }: { count: number; index: number; results: Record<number, Result> }) {
+function Progress({
+  count,
+  index,
+  results,
+  from,
+}: {
+  count: number
+  index: number
+  results: Record<number, Result>
+  from: number
+}) {
   return (
     <ol className="mt-4 flex gap-1.5" aria-label="Lesson progress">
       {Array.from({ length: count }, (_, i) => {
         const r = results[i]?.firstTryCorrect
-        const color = r === true ? 'bg-moss' : r === false ? 'bg-terracotta' : i === index ? 'bg-gold' : 'bg-line'
-        const label = r === true ? 'got it first try' : r === false ? 'needed help' : i === index ? 'current' : 'not started'
+        const earlier = r === undefined && i < from
+        const color =
+          r === true
+            ? 'bg-moss'
+            : r === false
+              ? 'bg-terracotta'
+              : i === index
+                ? 'bg-gold'
+                : earlier
+                  ? 'bg-stone-deep'
+                  : 'bg-line'
+        const label =
+          r === true
+            ? 'got it first try'
+            : r === false
+              ? 'needed help'
+              : i === index
+                ? 'current'
+                : earlier
+                  ? 'covered in an earlier session'
+                  : 'not started'
         return (
           <li key={i} className={`h-1.5 flex-1 rounded-full ${color}`}>
             <span className="sr-only">
@@ -455,11 +521,13 @@ function TailoredNote({ p }: { p: Personalization }) {
 function Summary({
   lesson,
   results,
+  from,
   demo,
   courseId,
 }: {
   lesson: Lesson
   results: Record<number, Result>
+  from: number
   demo: boolean
   courseId?: number
 }) {
@@ -485,7 +553,7 @@ function Summary({
       <h1 className="mt-8 text-center text-[clamp(1.7rem,3.4vw,2.4rem)]">You finished the lesson</h1>
       <p className="mt-3 text-center text-ink-soft">
         {answered.length
-          ? `You got ${firstTry} of ${answered.length} ${answered.length === 1 ? 'check-in' : 'check-ins'} right on the first try.`
+          ? `${from > 0 ? 'This session, you' : 'You'} got ${firstTry} of ${answered.length} ${answered.length === 1 ? 'check-in' : 'check-ins'} right on the first try.`
           : 'You skipped the check-ins this time. Answering them is how Theo learns what to explain differently.'}
       </p>
 
@@ -495,8 +563,16 @@ function Summary({
           return (
             <li key={i} className="flex items-center justify-between gap-4 px-5 py-3">
               <span>{s.concept}</span>
-              <span className={`text-[0.95rem] ${r === true ? 'text-moss' : r === false ? 'text-terracotta' : 'text-ink-soft'}`}>
-                {r === true ? 'Got it first try' : r === false ? 'Needed a second explanation' : 'Skipped'}
+              <span
+                className={`text-[0.95rem] ${r === true ? 'text-moss' : r === false ? 'text-terracotta' : 'text-ink-soft'}`}
+              >
+                {r === true
+                  ? 'Got it first try'
+                  : r === false
+                    ? 'Needed a second explanation'
+                    : i < from
+                      ? 'Covered earlier'
+                      : 'Skipped'}
               </span>
             </li>
           )
@@ -527,17 +603,19 @@ function Summary({
               </button>
             )}
             <Link href="/dashboard" className="btn btn-quiet no-underline">
-              Back to my lessons
+              Back to My Academy
             </Link>
           </>
         )}
       </div>
-      {reviewing !== 'idle' && reviewing !== 'working' && <p className="mt-4 text-center text-terracotta">{reviewing}</p>}
+      {reviewing !== 'idle' && reviewing !== 'working' && (
+        <p className="mt-4 text-center text-terracotta">{reviewing}</p>
+      )}
 
       {demo && (
         <p className="mx-auto mt-10 max-w-[60ch] text-center text-ink-soft">
-          With an account, Theo builds lessons from your own slides and recordings, remembers which ideas needed a second
-          explanation, and writes review lessons on exactly those.
+          With an account, Theo builds lessons from your own slides and recordings, remembers which ideas needed a
+          second explanation, and writes review lessons on exactly those.
         </p>
       )}
     </div>

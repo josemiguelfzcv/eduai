@@ -12,25 +12,30 @@ export function signInWithGoogle() {
   })
 }
 
-/** POSTs JSON to one of Lyceo's API routes with the user's session token. Throws with the server's message. */
-export async function postJSON<T>(url: string, body: unknown): Promise<T> {
-  const { data } = await supabase.auth.getSession()
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (data.session) headers.Authorization = `Bearer ${data.session.access_token}`
-
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
-  const json = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`)
-  return json as T
+/** An API error with the server's message and HTTP status (503 means My Academy isn't set up yet). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message)
+  }
 }
 
-export async function getJSON<T>(url: string): Promise<T> {
+/** Calls one of Lyceo's API routes with the user's session token. Throws ApiError with the server's message. */
+async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
   const { data } = await supabase.auth.getSession()
   const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (data.session) headers.Authorization = `Bearer ${data.session.access_token}`
 
-  const res = await fetch(url, { headers })
+  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   const json = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`)
+  if (!res.ok) throw new ApiError(json.error || `Request failed (${res.status})`, res.status)
   return json as T
 }
+
+export const getJSON = <T>(url: string) => request<T>('GET', url)
+export const postJSON = <T>(url: string, body: unknown) => request<T>('POST', url, body)
+export const patchJSON = <T>(url: string, body: unknown) => request<T>('PATCH', url, body)
+export const deleteJSON = <T>(url: string) => request<T>('DELETE', url)

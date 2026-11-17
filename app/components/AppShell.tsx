@@ -13,13 +13,15 @@ export function useRequiredUser() {
 
   useEffect(() => {
     let active = true
+    // Auth events repeat the same user; keeping one object stops pages from loading their data twice.
+    const keep = (next: User) => setUser((prev) => (prev?.id === next.id ? prev : next))
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return
-      if (data.session) setUser(data.session.user)
+      if (data.session) keep(data.session.user)
       else window.location.replace('/')
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) setUser(session.user)
+      if (session) keep(session.user)
     })
     return () => {
       active = false
@@ -31,32 +33,41 @@ export function useRequiredUser() {
 }
 
 const NAV = [
-  { href: '/dashboard', label: 'Lessons' },
+  { href: '/dashboard', label: 'My Academy' },
   { href: '/upload', label: 'New lesson' },
   { href: '/profile', label: 'Profile' },
 ]
 
 export function AppShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   const pathname = usePathname()
+  const width = wide ? 'max-w-6xl' : 'max-w-4xl'
 
   const signOut = async () => {
     await supabase.auth.signOut()
     window.location.replace('/')
   }
 
+  // Course and lesson pages live inside My Academy, so its tab stays marked there.
+  const current = (href: string) =>
+    pathname === href
+      ? 'page'
+      : href === '/dashboard' && (pathname.startsWith('/courses/') || pathname.startsWith('/class/'))
+        ? 'true'
+        : undefined
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-line">
-        <div className={`mx-auto flex items-center justify-between gap-4 px-5 py-4 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>
+        <div className={`mx-auto flex items-center justify-between gap-4 px-5 py-4 ${width}`}>
           <Logo href="/dashboard" />
-          <nav className="flex items-center gap-1 text-[0.95rem]">
+          <nav aria-label="Main" className="hidden items-center gap-1 text-[0.95rem] sm:flex">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={pathname === item.href ? 'page' : undefined}
+                aria-current={current(item.href)}
                 className={`rounded-md px-3 py-1.5 no-underline transition-colors ${
-                  pathname === item.href ? 'bg-ivory-deep font-bold text-ink' : 'text-ink-soft hover:text-ink'
+                  current(item.href) ? 'bg-ivory-deep font-bold text-ink' : 'text-ink-soft hover:text-ink'
                 }`}
               >
                 {item.label}
@@ -66,9 +77,29 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
               Sign out
             </button>
           </nav>
+          <button onClick={signOut} className="text-[0.9rem] text-ink-soft hover:text-ink sm:hidden">
+            Sign out
+          </button>
         </div>
+        {/* On phones the links get their own row of tabs. */}
+        <nav aria-label="Main" className="border-t border-line sm:hidden">
+          <div className="flex px-2">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={current(item.href)}
+                className={`-mb-px flex-1 whitespace-nowrap border-b-2 py-3 text-center text-[0.92rem] no-underline ${
+                  current(item.href) ? 'border-forest font-semibold text-ink' : 'border-transparent text-ink-soft'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
       </header>
-      <main className={`mx-auto px-5 pb-20 pt-10 ${wide ? 'max-w-6xl' : 'max-w-4xl'}`}>{children}</main>
+      <main className={`mx-auto px-5 pb-20 pt-10 ${width}`}>{children}</main>
     </div>
   )
 }

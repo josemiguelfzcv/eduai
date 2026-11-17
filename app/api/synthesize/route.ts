@@ -1,66 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { anthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
-import { createClient } from '@supabase/supabase-js'
+import type { Lesson } from '../../lib/lesson'
+import { errorResponse, HttpError, requireUser } from '../../lib/server/auth'
+import { writeLesson } from '../../lib/server/ai'
+import { getOwnCourse } from '../../lib/server/courses'
+import { loadLearner, personalizationFor } from '../../lib/server/learner'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
+/** Writes a lesson from extracted material, tailored to the student's learner model. */
 export async function POST(req: NextRequest) {
+  let courseId: number | null = null
+  let db: Awaited<ReturnType<typeof requireUser>>['db'] | null = null
   try {
-    const { text, courseTitle, userId, courseId } = await req.json()
+    const auth = await requireUser(req)
+    db = auth.db
+    const { courseId: id, text } = await req.json()
+    if (typeof text !== 'string' || !text.trim()) throw new HttpError(400, 'There is no material to teach from.')
 
-    const { text: responseText } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
-      prompt: `Eres un experto en educación. Analiza el siguiente material de clase y genera un script estructurado para explicárselo a un estudiante de forma clara y simple, como si fuera un profesor paciente explicando con ejemplos cotidianos.
+    const course = await getOwnCourse(db, auth.user.id, id)
+    courseId = course.id
 
-Curso: ${courseTitle}
+    const learner = await loadLearner(db, auth.user.id)
+    const personalization = personalizationFor(learner)
+    const draft = await writeLesson({ courseTitle: course.title, material: text, student: personalization })
+    const lesson: Lesson = { ...draft, meta: { version: 2, kind: 'lesson', personalization } }
 
-Material:
-${text.slice(0, 8000)}
+    const { error } = await db.from('courses').update({ script: lesson, status: 'ready' }).eq('id', courseId)
+    if (error) throw error
 
-Genera un JSON con esta estructura exacta:
-{
-  "titulo": "título de la clase",
-  "duracion_estimada": "X minutos",
-  "segmentos": [
-    {
-      "orden": 1,
-      "concepto": "nombre del concepto",
-      "narracion": "lo que el profesor dice en voz alta, explicado simple",
-      "pizarra": "lo que aparece escrito en la pizarra",
-      "duracion_segundos": 120,
-      "pregunta_check": "pregunta para verificar que el estudiante entendió"
-    }
-  ]
-}
-
-Responde SOLO con el JSON, sin texto adicional ni backticks.`
-    })
-
-    const cleaned = responseText
-      .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```\s*$/i, '')
-      .trim()
-
-    const script = JSON.parse(cleaned)
-
-    // Guarda el script en Supabase
-    if (courseId) {
-      await supabase
-        .from('courses')
-        .update({ script: script, status: 'ready' })
-        .eq('id', courseId)
-    }
-
-    return NextResponse.json({ success: true, script })
-
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ success: false, error: 'Error generando script' }, { status: 500 })
+    return NextResponse.json({ courseId, lesson })
+  } catch (err) {
+    if (db && courseId !== null) await db.from('courses').update({ status: 'failed' }).eq('id', courseId)
+    return errorResponse(err, 'Theo could not write this lesson. Try again in a minute.')
   }
 }

@@ -1,73 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { anthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
-import { createClient } from '@supabase/supabase-js'
+import { DEMO_LESSON } from '../../lib/demo-lesson'
+import { errorResponse, HttpError, optionalUser } from '../../lib/server/auth'
+import { gradeAnswer } from '../../lib/server/ai'
+import { getOwnCourse } from '../../lib/server/courses'
+import { speechUrl } from '../../lib/server/tts'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
+/** Grades a check-in answer, re-explains when it's wrong, and records the result in the learner model. */
 export async function POST(req: NextRequest) {
   try {
-    const { question, answer, concept, narration, userId, courseId, segmentIndex, timeToAnswer } = await req.json()
+    const { demo, courseId, segmentIndex, answer, timeToAnswer } = await req.json()
+    if (typeof answer !== 'string' || !answer.trim()) throw new HttpError(400, 'Write an answer first.')
+    const index = Number(segmentIndex)
 
-    console.log('DATOS RECIBIDOS:', { userId, courseId, segmentIndex, timeToAnswer })
+    const auth = demo ? null : await optionalUser(req)
+    if (!demo && !auth) throw new HttpError(401, 'Sign in to continue.')
 
-    const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
-      prompt: `Eres un profesor joven, cercano y con sentido del humor que está evaluando la respuesta de un estudiante en una sesión uno a uno.
+    let segment = demo ? DEMO_LESSON.segments[index] : undefined
+    let styleId: string | null = null
+    let missedBefore = 0
 
-Concepto explicado: ${concept}
-Explicación dada: ${narration}
-Pregunta hecha: ${question}
-Respuesta del estudiante: "${answer}"
+    if (auth) {
+      const course = await getOwnCourse(auth.db, auth.user.id, courseId)
+      segment = course.lesson?.segments[index]
 
-Evalúa la respuesta y reacciona de forma HUMANA y PERSONALIZADA a lo que el estudiante dijo específicamente.
+      const [{ data: profile }, { count }] = await Promise.all([
+        auth.db.from('users').select('learning_style').eq('id', auth.user.id).maybeSingle(),
+        auth.db
+          .from('session_events')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', auth.user.id)
+          .eq('course_id', course.id)
+          .eq('segment_index', index)
+          .eq('correct', false),
+      ])
+      styleId = profile?.learning_style ?? null
+      missedBefore = count ?? 0
+    }
+    if (!segment) throw new HttpError(404, 'That part of the lesson does not exist.')
 
-Si la respuesta es graciosa o muy equivocada: reacciona con humor ligero (puedes usar "jajaja", "😂", "eso estuvo gracioso pero...").
-Si se acerca pero no llega: anímalos ("¡casi!", "vas por buen camino...").
-Si es correcta: celebra de forma genuina y específica a su respuesta.
-Si es una respuesta al azar o sin sentido: llámalo out con humor.
+    const cleanAnswer = answer.trim().slice(0, demo ? 400 : 1500)
+    const grade = await gradeAnswer({ segment, answer: cleanAnswer, styleId, missedBefore })
 
-Responde SOLO con este JSON:
-{
-  "correcto": true o false,
-  "feedback": "reacción personalizada y humana a LO QUE DIJO el estudiante específicamente (2-3 oraciones, con personalidad)",
-  "reexplicacion_narracion": "si correcto es false: re-explica el concepto de forma diferente con una analogía nueva, mencionando brevemente lo que dijo el estudiante para conectar. Si correcto es true: deja vacío.",
-  "reexplicacion_pizarra": "si correcto es false: frase corta, diagrama o ecuación clave que refuerza el concepto (máx 10 palabras). Si correcto es true: deja vacío."
-}
-
-Responde SOLO con el JSON, sin texto adicional ni backticks.`
-    })
-
-    const cleaned = text
-      .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```\s*$/i, '')
-      .trim()
-
-    const result = JSON.parse(cleaned)
-
-    // Guarda en Supabase
-    if (userId && courseId) {
-      const { error: dbError } = await supabase.from('session_events').insert({
-        user_id: userId,
+    if (auth) {
+      const { error } = await auth.db.from('session_events').insert({
+        user_id: auth.user.id,
         course_id: Number(courseId),
-        segment_index: segmentIndex,
-        question: question,
-        answer: answer,
-        correct: result.correcto,
-        time_to_answer_seconds: timeToAnswer
+        segment_index: index,
+        question: segment.check.question,
+        answer: cleanAnswer,
+        correct: grade.correct,
+        time_to_answer_seconds: Number.isFinite(timeToAnswer) ? Math.round(timeToAnswer) : null,
       })
-      if (dbError) console.error('Error guardando en Supabase:', dbError)
+      if (error) console.error('Could not save check-in', error)
     }
 
-    return NextResponse.json({ success: true, ...result })
-
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ success: false, error: 'Error evaluando respuesta' }, { status: 500 })
+    return NextResponse.json({
+      ...grade,
+      reexplanationAudio: grade.reexplanation ? speechUrl(grade.reexplanation) : null,
+    })
+  } catch (err) {
+    return errorResponse(err, 'Could not check your answer. Try again.')
   }
 }

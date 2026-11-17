@@ -1,236 +1,191 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { generateUploadButton } from '@uploadthing/react'
+import { useRouter } from 'next/navigation'
+import { useRef, useState } from 'react'
+import { generateReactHelpers } from '@uploadthing/react'
 import type { OurFileRouter } from '../api/uploadthing/route'
-import { supabase } from '../lib/supabase'
+import { AppShell, useRequiredUser } from '../components/AppShell'
+import { postJSON, supabase } from '../lib/supabase'
 
-const UploadButton = generateUploadButton<OurFileRouter>()
+const { useUploadThing } = generateReactHelpers<OurFileRouter>()
+
+type Step = 'idle' | 'upload' | 'read' | 'write' | 'done'
+const ORDER: Step[] = ['upload', 'read', 'write', 'done']
+
+const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
 
 export default function Upload() {
-  const [extractedText, setExtractedText] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [status, setStatus] = useState('')
-  const [userId, setUserId] = useState<string | null>(null)
-  const [courseTitle, setCourseTitle] = useState('')
-  const [script, setScript] = useState<any>(null)
-  const [playingIndex, setPlayingIndex] = useState<number | null>(null)
-  const [courseId, setCourseId] = useState<string | null>(null)
+  useRequiredUser()
+  const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [title, setTitle] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const [step, setStep] = useState<Step>('idle')
+  const [progress, setProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id)
-    })
-  }, [])
+  const { startUpload } = useUploadThing('materialUploader', {
+    headers: async (): Promise<Record<string, string>> => {
+      const { data } = await supabase.auth.getSession()
+      return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}
+    },
+    onUploadProgress: setProgress,
+  })
 
-  const handleUploadComplete = async (res: any) => {
-    const file = res[0]
-    const fileUrl = file.ufsUrl
-    const fileName = file.name
-    const isPdf = fileName.endsWith('.pdf')
-
-    setLoading(true)
-    setStatus(isPdf ? '📄 Extrayendo texto del PDF...' : '🎙️ Transcribiendo audio con Whisper...')
-
-    const endpoint = isPdf ? '/api/extract-pdf' : '/api/transcribe'
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileUrl, userId, courseTitle })
-    })
-
-    const data = await response.json()
-    setExtractedText(data.text)
-    setCourseId(data.courseId)
-
-    setStatus('🧠 Generando tu clase personalizada con IA...')
-
-    const scriptResponse = await fetch('/api/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: data.text, courseTitle, userId, courseId: data.courseId })
-    })
-
-    const scriptData = await scriptResponse.json()
-    setScript(scriptData.script)
-setLoading(false)
-setStatus('✅ ¡Tu clase está lista!')
-
-// Redirige a la página de clase
-setTimeout(() => {
-  window.location.href = `/class/${data.courseId}`
-}, 1500)
+  const choose = (f: File | undefined) => {
+    if (!f) return
+    setError(null)
+    const ok = isPdf(f) || f.type.startsWith('audio/')
+    if (!ok) return setError('Lyceo reads PDFs and audio recordings. Export your slides as a PDF and try again.')
+    if (f.size > 32 * 1024 * 1024) return setError('That file is over 32 MB. Try a smaller PDF or a shorter recording.')
+    setFile(f)
+    if (!title) setTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '))
   }
 
-  const playNarration = async (text: string, index: number) => {
-    setPlayingIndex(index)
-    const res = await fetch('/api/text-to-speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        segmentId: `course-${courseId}-seg-${index}`
-      })
-    })
-    const data = await res.json()
-    const audio = new Audio(data.url)
-    audio.play()
-    audio.onended = () => setPlayingIndex(null)
+  const run = async () => {
+    if (!file) return
+    setError(null)
+    setProgress(0)
+    try {
+      setStep('upload')
+      const uploaded = await startUpload([file])
+      const fileUrl = uploaded?.[0]?.ufsUrl
+      if (!fileUrl) throw new Error('The upload did not finish. Check your connection and try again.')
+
+      setStep('read')
+      const { courseId, text } = await postJSON<{ courseId: number; text: string }>(
+        isPdf(file) ? '/api/extract-pdf' : '/api/transcribe',
+        { fileUrl, fileName: file.name, title: title.trim() },
+      )
+
+      setStep('write')
+      await postJSON('/api/synthesize', { courseId, text })
+
+      setStep('done')
+      router.push(`/class/${courseId}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong. Try again.')
+      setStep('idle')
+    }
   }
+
+  const busy = step !== 'idle'
+  const audio = file ? !isPdf(file) : false
+  const steps: { id: Step; label: string; note?: string }[] = [
+    { id: 'upload', label: 'Uploading', note: step === 'upload' ? `${Math.round(progress)}%` : undefined },
+    { id: 'read', label: audio ? 'Transcribing the recording' : 'Reading the slides' },
+    { id: 'write', label: 'Theo is writing your lesson', note: step === 'write' ? 'usually 30 to 60 seconds' : undefined },
+    { id: 'done', label: 'Opening your lesson' },
+  ]
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      padding: "40px",
-      maxWidth: "680px",
-      margin: "0 auto"
-    }}>
-      <a href="/dashboard" style={{ color: "#4285F4", fontSize: "0.85rem", textDecoration: "none" }}>
-        ← Volver al dashboard
-      </a>
+    <AppShell>
+      <h1 className="text-[clamp(1.9rem,3.6vw,2.6rem)]">New lesson</h1>
+      <p className="mt-3 max-w-[60ch] text-ink-soft">
+        Upload the slides or a recording from one class. Theo writes a lesson from it, tailored to how you learn.
+      </p>
 
-      <h1 style={{ marginTop: "24px", marginBottom: "8px" }}>Nueva clase 📚</h1>
-      <p style={{ marginBottom: "32px" }}>Sube tus apuntes (PDF) o grabación de clase (MP3/MP4)</p>
+      <div className="mt-8 max-w-2xl space-y-6">
+        <div>
+          <label htmlFor="title" className="mb-2 block font-bold">
+            Which class is this?
+          </label>
+          <input
+            id="title"
+            className="field"
+            placeholder="Stat 161: Conditional probability"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={busy}
+          />
+        </div>
 
-      <input
-        type="text"
-        placeholder="Nombre de la clase (ej: Estadística 201)"
-        value={courseTitle}
-        onChange={(e) => setCourseTitle(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "12px 16px",
-          borderRadius: "8px",
-          border: "1px solid #252a38",
-          background: "#181c26",
-          color: "#e8eaf0",
-          fontSize: "1rem",
-          marginBottom: "20px"
-        }}
-      />
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            if (!busy) choose(e.dataTransfer.files[0])
+          }}
+          className={`rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gold ${
+            dragging ? 'border-aegean bg-aegean/5' : 'border-line bg-[#fffdf8]'
+          }`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf,audio/*"
+            className="sr-only"
+            id="file"
+            onChange={(e) => choose(e.target.files?.[0])}
+            disabled={busy}
+          />
+          {file ? (
+            <>
+              <p className="font-display text-[1.25rem] font-semibold">{file.name}</p>
+              <p className="mt-1 text-ink-soft">
+                {audio ? 'Recording' : 'PDF'}, {(file.size / 1024 / 1024).toFixed(1)} MB
+              </p>
+              {!busy && (
+                <button className="mt-3 text-aegean underline underline-offset-4" onClick={() => inputRef.current?.click()}>
+                  Choose a different file
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="font-display text-[1.25rem] font-semibold">Drop a PDF or a recording here</p>
+              <p className="mt-1 text-ink-soft">Slides as PDF, or audio up to 25 MB</p>
+              <label htmlFor="file" className="btn btn-quiet mt-5 cursor-pointer">
+                Choose a file
+              </label>
+            </>
+          )}
+        </div>
 
-      <UploadButton
-        endpoint="pdfUploader"
-        onClientUploadComplete={handleUploadComplete}
-        onUploadError={(error) => alert("Error: " + error.message)}
-      />
-
-      {loading && (
-  <div style={{ marginTop: "32px" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-      <div style={{
-        width: "20px", height: "20px",
-        border: "2px solid #252a38",
-        borderTop: "2px solid #4285F4",
-        borderRadius: "50%",
-        animation: "spin 0.8s linear infinite",
-        flexShrink: 0
-      }} />
-      <p style={{ color: "#4285F4", fontWeight: 600 }}>{status}</p>
-    </div>
-
-    <div style={{
-      background: "#181c26",
-      borderRadius: "12px",
-      border: "1px solid #252a38",
-      padding: "20px 24px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "14px"
-    }}>
-      {[
-        { label: "📄 Extrayendo texto del PDF", done: status.includes('Generando') || status.includes('lista') },
-        { label: "🧠 Generando script con Claude", done: status.includes('lista') },
-        { label: "✅ Clase lista", done: false }
-      ].map((step, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
-            width: "20px", height: "20px",
-            borderRadius: "50%",
-            background: step.done ? "#22d98a" : "#252a38",
-            border: step.done ? "none" : "1px solid #363d52",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            fontSize: "0.65rem",
-            color: "white",
-            fontWeight: 700
-          }}>
-            {step.done ? "✓" : ""}
-          </div>
-          <p style={{
-            fontSize: "0.85rem",
-            color: step.done ? "#22d98a" : "#8b92a5"
-          }}>
-            {step.label}
+        {error && (
+          <p role="alert" className="rounded-lg border-l-4 border-terracotta bg-terracotta/5 px-4 py-3">
+            {error}
           </p>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+        )}
 
-<style>{`
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-`}</style>
-
-      {script && (
-        <div style={{
-          marginTop: "32px",
-          padding: "24px",
-          background: "#181c26",
-          borderRadius: "12px",
-          border: "1px solid #252a38"
-        }}>
-          <p style={{ color: "#22d98a", fontWeight: 700, marginBottom: "16px" }}>✅ ¡Tu clase está lista!</p>
-          <h2 style={{ color: "#e8eaf0", marginBottom: "8px" }}>📖 {script.titulo}</h2>
-          <p style={{ color: "#8b92a5", marginBottom: "24px" }}>⏱ {script.duracion_estimada}</p>
-          {Array.isArray(script.segmentos) && script.segmentos.map((seg: any, i: number) => (
-            <div key={i} style={{
-              padding: "16px",
-              background: "#0f1117",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              borderLeft: "3px solid #4285F4"
-            }}>
-              <p style={{ color: "#4285F4", fontSize: "0.75rem", marginBottom: "6px" }}>
-                SEGMENTO {seg.orden}
-              </p>
-              <h3 style={{ color: "#e8eaf0", marginBottom: "8px" }}>{seg.concepto}</h3>
-              <p style={{ fontSize: "0.85rem", color: "#8b92a5", marginBottom: "8px" }}>
-                🗣 {seg.narracion}
-              </p>
-              <p style={{ fontSize: "0.82rem", color: "#ffd166" }}>
-                📐 Pizarra: {seg.pizarra}
-              </p>
-              <p style={{ fontSize: "0.8rem", color: "#22d98a", marginTop: "8px" }}>
-                ❓ {seg.pregunta_check}
-              </p>
-              <button
-                onClick={() => playNarration(seg.narracion, i)}
-                disabled={playingIndex !== null}
-                style={{
-                  marginTop: "12px",
-                  padding: "8px 16px",
-                  background: playingIndex === i ? "#1a1f2e" : "#4285F4",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: playingIndex !== null ? "not-allowed" : "pointer",
-                  fontSize: "0.8rem"
-                }}
-              >
-                {playingIndex === i ? "🔊 Reproduciendo..." : "🔊 Escuchar narración"}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        {busy ? (
+          <ol className="panel space-y-3 p-6" aria-live="polite">
+            {steps.map((s) => {
+              const pos = ORDER.indexOf(s.id)
+              const current = ORDER.indexOf(step)
+              const state = pos < current ? 'done' : pos === current ? 'active' : 'todo'
+              return (
+                <li key={s.id} className="flex items-center gap-3">
+                  {state === 'active' ? (
+                    <span className="spinner text-aegean" />
+                  ) : (
+                    <span
+                      className={`flex h-[1.1rem] w-[1.1rem] items-center justify-center rounded-full text-[0.7rem] font-bold ${
+                        state === 'done' ? 'bg-teal text-white' : 'border-2 border-line'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {state === 'done' ? '✓' : ''}
+                    </span>
+                  )}
+                  <span className={state === 'todo' ? 'text-ink-soft' : 'text-ink'}>{s.label}</span>
+                  {s.note && <span className="text-ink-soft">{s.note}</span>}
+                </li>
+              )
+            })}
+          </ol>
+        ) : (
+          <button className="btn btn-primary px-6 py-3" onClick={run} disabled={!file}>
+            Make my lesson
+          </button>
+        )}
+      </div>
+    </AppShell>
   )
 }

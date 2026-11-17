@@ -1,44 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractText } from 'unpdf'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { assertUploadUrl, errorResponse, HttpError, requireUser } from '../../lib/server/auth'
+import { createCourse } from '../../lib/server/courses'
 
 export async function POST(req: NextRequest) {
   try {
-    const { fileUrl, userId, courseTitle } = await req.json()
+    const { user, db } = await requireUser(req)
+    const { fileUrl, title } = await req.json()
 
-    // Extrae el texto
-    const response = await fetch(fileUrl)
-    const arrayBuffer = await response.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
-    const { text } = await extractText(buffer, { mergePages: true })
+    const res = await fetch(assertUploadUrl(fileUrl))
+    if (!res.ok) throw new HttpError(502, 'Could not download the PDF. Try uploading it again.')
+    const { text } = await extractText(new Uint8Array(await res.arrayBuffer()), { mergePages: true })
 
-    // Guarda en Supabase
-    const { data, error } = await supabase
-      .from('courses')
-      .insert({
-        user_id: userId,
-        title: courseTitle || 'Nueva clase',
-        description: text.slice(0, 500),
-        status: 'extracted'
-      })
-      .select()
-      .single()
+    if (text.replace(/\s+/g, ' ').trim().length < 200) {
+      throw new HttpError(
+        422,
+        "This PDF has almost no selectable text, so it's probably a scan. Export the slides as a text PDF and upload that instead.",
+      )
+    }
 
-    if (error) throw error
-
-    return NextResponse.json({
-      success: true,
-      text: text,
-      courseId: data.id
-    })
-
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ success: false, error: 'Error extrayendo texto' }, { status: 500 })
+    const courseId = await createCourse(db, user.id, title, text)
+    return NextResponse.json({ courseId, text })
+  } catch (err) {
+    return errorResponse(err, 'Could not read the PDF.')
   }
 }

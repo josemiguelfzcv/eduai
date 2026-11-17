@@ -1,28 +1,237 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+/*
+  Lyceo design tokens.
+  Warm parchment, ink text, Aegean blue for actions, gold for the board frame and Theo,
+  terracotta for "needs work", teal for "got it". The chalkboard is the one bold element.
+*/
+@theme {
+  --color-parchment: #faf6ee;
+  --color-parchment-deep: #f1e9d9;
+  --color-ink: #1c2733;
+  --color-ink-soft: #4a5563;
+  --color-line: #e2d7c2;
+  --color-gold: #c9a84c;
+  --color-gold-deep: #a8862f;
+  --color-aegean: #2b6cb0;
+  --color-aegean-deep: #22558c;
+  --color-terracotta: #c4622d;
+  --color-teal: #2d7d6f;
+  --color-board: #1e3533;
+  --color-board-deep: #172a28;
+  --color-chalk: #f1ede2;
+
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-chalk: "Caveat", "Segoe Print", "Bradley Hand", cursive;
 }
 
-body {
-  background: #0f1117;
-  color: #e8eaf0;
-  font-family: 'Inter', system-ui, sans-serif;
-  min-height: 100vh;
+@layer base {
+  html {
+    font-size: 18px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-parchment);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-gold) 40%, transparent);
+  }
 }
 
-h1 {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 8px;
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.6rem;
+    padding: 0.65rem 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    cursor: pointer;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .btn-primary {
+    background: var(--color-aegean);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-aegean-deep);
+  }
+  .btn-gold {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+  .btn-gold:hover:not(:disabled) {
+    background: var(--color-gold-deep);
+    color: #fff;
+  }
+  .btn-quiet {
+    background: transparent;
+    color: var(--color-ink);
+    border: 1.5px solid var(--color-line);
+  }
+  .btn-quiet:hover:not(:disabled) {
+    border-color: var(--color-ink-soft);
+  }
+
+  .field {
+    width: 100%;
+    border: 1.5px solid var(--color-line);
+    background: #fffdf8;
+    border-radius: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    color: var(--color-ink);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-aegean);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-aegean) 18%, transparent);
+  }
+
+  .panel {
+    background: #fffdf8;
+    border: 1.5px solid var(--color-line);
+    border-radius: 1rem;
+  }
+
+  /* The chalkboard: slate surface, gold frame, Greek-key band along the top. */
+  .board {
+    position: relative;
+    background:
+      radial-gradient(120% 90% at 30% 20%, rgba(255, 255, 255, 0.06), transparent 60%),
+      linear-gradient(160deg, var(--color-board), var(--color-board-deep));
+    border: 3px solid var(--color-gold);
+    border-radius: 0.9rem;
+    color: var(--color-chalk);
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 14px;
+    opacity: 0.85;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='14' viewBox='0 0 16 14'%3E%3Cpath d='M0 12.5H16M11.5 12.5V2.5H2.5V9.5H8.5V5.5H5.5' fill='none' stroke='%23c9a84c' stroke-width='1.4'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-position: left 4px;
+  }
+  .board-line {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--font-chalk);
+    font-size: clamp(1.2rem, 2.6vw, 2rem);
+    line-height: 1.35;
+    text-shadow: 0 0 1px rgba(241, 237, 226, 0.4);
+  }
+  .board-line .katex {
+    font-size: 0.82em;
+    color: var(--color-chalk);
+  }
+  .board-line .katex-display {
+    margin: 0.35em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.1em 0;
+  }
+  .board-line .katex-display .katex {
+    font-size: 1.05em;
+    color: #f6e7b5;
+  }
+
+  /* Chalk being written: each line wipes in from the left. */
+  .chalk-in {
+    animation: chalk-in 900ms ease-out both;
+  }
 }
 
-p {
-  color: #8b92a5;
-  line-height: 1.6;
+@keyframes chalk-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
 }
 
-a {
-  color: inherit;
+@keyframes theo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes theo-bar {
+  from {
+    transform: scaleY(0.4);
+  }
+  to {
+    transform: scaleY(1.4);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.theo-float {
+  animation: theo-float 5s ease-in-out infinite;
+}
+
+.spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  border: 2.5px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theo-float,
+  .chalk-in,
+  .spinner {
+    animation: none;
+  }
 }

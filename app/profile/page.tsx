@@ -1,155 +1,112 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AppShell, LoadingNote, useRequiredUser } from '../components/AppShell'
+import { LEARNING_STYLES, MAJORS, normalizeMajor } from '../lib/learning-styles'
 import { supabase } from '../lib/supabase'
 
-const CAREERS = [
-  "Ciencias de la Computación", "Matemáticas", "Física", "Química",
-  "Biología", "Economía", "Psicología", "Historia", "Literatura",
-  "Ingeniería", "Medicina", "Derecho", "Otra"
-]
-
-const STYLES = [
-  { id: "analogias", label: "🍎 Con analogías y ejemplos cotidianos" },
-  { id: "formal", label: "📚 Formal y estructurado" },
-  { id: "codigo", label: "💻 Con ejemplos de código" },
-  { id: "visual", label: "🎨 Visual y con diagramas" },
-]
-
 export default function Profile() {
-  const [user, setUser] = useState<any>(null)
-  const [name, setName] = useState('')
-  const [career, setCareer] = useState('')
+  const user = useRequiredUser()
+  const [loaded, setLoaded] = useState(false)
+  const [major, setMajor] = useState('')
   const [style, setStyle] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        setUser(data.user)
-        setName(data.user.user_metadata?.full_name || '')
-
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
-
-        if (profile) {
-          setCareer(profile.career || '')
-          setStyle(profile.learning_style || '')
-        }
-      }
-    })
-  }, [])
-
-  const save = async () => {
     if (!user) return
-    setSaving(true)
+    supabase
+      .from('users')
+      .select('career, learning_style')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setMajor(normalizeMajor(data?.career) ?? '')
+        setStyle(data?.learning_style ?? '')
+        setLoaded(true)
+      })
+  }, [user])
 
-    await supabase.from('users').upsert({
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setStatus('saving')
+    const { error } = await supabase.from('users').upsert({
       id: user.id,
       email: user.email,
-      name: name,
-      career: career,
-      learning_style: style
+      name: user.user_metadata?.full_name,
+      career: major || null,
+      learning_style: style || null,
     })
-
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setStatus(error ? 'error' : 'saved')
   }
 
-  return (
-    <div style={{ minHeight: "100vh", padding: "40px", maxWidth: "560px", margin: "0 auto" }}>
-      <a href="/dashboard" style={{ color: "#4285F4", fontSize: "0.85rem", textDecoration: "none" }}>
-        ← Volver al dashboard
-      </a>
+  const majors = major && !MAJORS.includes(major) ? [major, ...MAJORS] : MAJORS
 
-      <h1 style={{ marginTop: "24px", marginBottom: "8px" }}>Mi perfil</h1>
-      <p style={{ color: "#8b92a5", marginBottom: "32px" }}>
-        Esto ayuda a StudyAI a personalizar las clases para ti
+  return (
+    <AppShell>
+      <h1 className="text-[clamp(1.9rem,3.6vw,2.6rem)]">How Theo teaches you</h1>
+      <p className="mt-3 max-w-[60ch] text-ink-soft">
+        Theo uses this, together with how you do on check-ins, every time he writes a lesson for you.
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        <div>
-          <label style={{ display: "block", fontSize: "0.8rem", color: "#8b92a5", marginBottom: "8px" }}>
-            NOMBRE
-          </label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{
-              width: "100%", padding: "12px 16px",
-              borderRadius: "8px", border: "1px solid #252a38",
-              background: "#181c26", color: "#e8eaf0", fontSize: "0.95rem"
-            }}
-          />
+      {!loaded ? (
+        <div className="mt-8">
+          <LoadingNote>Loading your profile</LoadingNote>
         </div>
-
-        <div>
-          <label style={{ display: "block", fontSize: "0.8rem", color: "#8b92a5", marginBottom: "8px" }}>
-            CARRERA
-          </label>
-          <select
-            value={career}
-            onChange={(e) => setCareer(e.target.value)}
-            style={{
-              width: "100%", padding: "12px 16px",
-              borderRadius: "8px", border: "1px solid #252a38",
-              background: "#181c26", color: "#e8eaf0", fontSize: "0.95rem"
-            }}
-          >
-            <option value="">Selecciona tu carrera</option>
-            {CAREERS.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: "block", fontSize: "0.8rem", color: "#8b92a5", marginBottom: "12px" }}>
-            ¿CÓMO PREFIERES QUE TE EXPLIQUEN?
-          </label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {STYLES.map(s => (
-              <div
-                key={s.id}
-                onClick={() => setStyle(s.id)}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  border: `1px solid ${style === s.id ? '#4285F4' : '#252a38'}`,
-                  background: style === s.id ? '#1a2035' : '#181c26',
-                  cursor: "pointer",
-                  color: style === s.id ? "#e8eaf0" : "#8b92a5",
-                  fontSize: "0.88rem",
-                  transition: "all 0.15s"
-                }}
-              >
-                {s.label}
-              </div>
-            ))}
+      ) : (
+        <form onSubmit={save} className="mt-8 max-w-2xl space-y-8" onChange={() => setStatus('idle')}>
+          <div>
+            <label htmlFor="major" className="mb-2 block font-bold">
+              Your major
+            </label>
+            <p className="mb-3 text-ink-soft">Theo picks examples from your field when they fit.</p>
+            <select id="major" className="field" value={major} onChange={(e) => setMajor(e.target.value)}>
+              <option value="">Choose your major</option>
+              {majors.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{
-            padding: "14px",
-            background: saved ? "#22d98a" : saving ? "#252a38" : "#4285F4",
-            color: saved ? "#000" : "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: saving ? "not-allowed" : "pointer",
-            fontWeight: 700,
-            fontSize: "0.95rem",
-            marginTop: "8px"
-          }}
-        >
-          {saved ? "✅ Guardado" : saving ? "Guardando..." : "Guardar perfil"}
-        </button>
-      </div>
-    </div>
+          <fieldset>
+            <legend className="mb-2 font-bold">How you like things explained</legend>
+            <p className="mb-3 text-ink-soft">
+              When an explanation doesn&apos;t land, Theo switches to a different approach on his own.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {LEARNING_STYLES.map((s) => (
+                <label
+                  key={s.id}
+                  className={`cursor-pointer rounded-xl border-2 p-4 transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gold ${
+                    style === s.id ? 'border-aegean bg-aegean/5' : 'border-line bg-[#fffdf8] hover:border-ink-soft'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="style"
+                    value={s.id}
+                    checked={style === s.id}
+                    onChange={() => setStyle(s.id)}
+                    className="sr-only"
+                  />
+                  <span className="block font-bold">{s.label}</span>
+                  <span className="mt-1 block text-[0.95rem] text-ink-soft">{s.description}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="flex items-center gap-4">
+            <button type="submit" className="btn btn-primary px-6" disabled={status === 'saving'}>
+              {status === 'saving' ? 'Saving' : 'Save'}
+            </button>
+            {status === 'saved' && <p className="text-teal">Saved. Your next lesson will use this.</p>}
+            {status === 'error' && <p className="text-terracotta">Couldn&apos;t save. Check your connection and try again.</p>}
+          </div>
+        </form>
+      )}
+    </AppShell>
   )
 }

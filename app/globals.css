@@ -172,6 +172,11 @@
     color: #f6e7b5;
   }
 
+  /* The landing page board sits in half a column, so its text runs smaller. */
+  .hero-board .board-line {
+    font-size: clamp(1.05rem, 1.65vw, 1.6rem);
+  }
+
   /* Chalk being written: each line wipes in from the left. */
   .chalk-in {
     animation: chalk-in 900ms ease-out both;

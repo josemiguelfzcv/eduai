@@ -5,7 +5,7 @@ import { Theo } from './components/Theo'
 import { renderBoardLine } from './lib/math'
 
 const HERO_BOARD = [
-  'Test is 95% accurate. You test positive.',
+  'Sensitivity 95%, false alarms 10%',
   'True positives: $0.95 \\times 10 = 9.5$',
   'False positives: $0.10 \\times 990 = 99$',
   '$$P(\\text{sick} \\mid +) = \\frac{9.5}{108.5} \\approx 8.8\\%$$',
@@ -48,7 +48,7 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-24 pt-10 lg:grid-cols-[1fr_1.05fr] lg:pt-16">
+        <section className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-24 pt-10 lg:grid-cols-[1fr_1.15fr] lg:pt-16">
           <div className="min-w-0">
             <h1 className="text-[clamp(2.6rem,6vw,4.4rem)] font-semibold leading-[1.04]">
               The tutor that learns how you learn.
@@ -66,8 +66,8 @@ export default function Home() {
             <p className="mt-4 text-[0.95rem] text-ink-soft">The demo lesson on Bayes&apos; theorem needs no account.</p>
           </div>
 
-          <div className="relative min-w-0 pb-16 sm:pb-10 sm:pl-14">
-            <div className="board px-7 pb-9 pt-11 sm:px-10">
+          <div className="relative min-w-0 pb-16 sm:pb-28 sm:pl-14">
+            <div className="board hero-board px-6 pb-8 pt-11 sm:px-8 sm:pb-16">
               <div className="flex flex-col gap-2">
                 {HERO_BOARD.map((line, i) => (
                   <div
@@ -79,14 +79,14 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            <div className="panel absolute -bottom-2 right-6 hidden max-w-[17rem] p-4 sm:block shadow-[0_10px_30px_-12px_rgba(28,39,51,0.35)]">
+            <div className="panel absolute bottom-0 right-6 hidden max-w-[17rem] p-4 sm:block shadow-[0_10px_30px_-12px_rgba(28,39,51,0.35)]">
               <p className="text-[0.95rem] text-ink-soft">So, roughly what&apos;s the chance you&apos;re sick?</p>
               <p className="mt-1 font-bold">&ldquo;Like 95%?&rdquo;</p>
               <p className="mt-2 border-l-4 border-terracotta pl-3 text-[0.95rem]">
                 That&apos;s the trap. Let&apos;s count 1,000 people instead.
               </p>
             </div>
-            <Theo size={112} className="absolute -bottom-2 right-0 sm:-left-6 sm:bottom-2 sm:right-auto" />
+            <Theo size={112} className="absolute -bottom-2 right-0 sm:-left-6 sm:bottom-6 sm:right-auto" />
           </div>
         </section>
 

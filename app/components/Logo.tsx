@@ -1,14 +1,34 @@
 import Link from 'next/link'
 
-export function Logo({ href = '/' }: { href?: string }) {
+/** The Lyceo theta mark and wordmark. `light` is the outline version used over photography. */
+export function Logo({ href = '/', tone = 'dark' }: { href?: string; tone?: 'dark' | 'light' }) {
+  const light = tone === 'light'
   return (
-    <Link href={href} className="inline-flex items-center gap-2 rounded-md text-ink no-underline">
-      <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="30" fill="#2b6cb0" stroke="#c9a84c" strokeWidth="4" />
-        <ellipse cx="32" cy="32" rx="11" ry="15" fill="none" stroke="#faf6ee" strokeWidth="4.5" />
-        <path d="M23 32h18" stroke="#faf6ee" strokeWidth="4" strokeLinecap="round" />
-      </svg>
-      <span className="font-display text-[1.45rem] font-semibold tracking-tight">Lyceo</span>
+    <Link
+      href={href}
+      aria-label="Lyceo home"
+      className={`inline-flex items-center gap-2.5 rounded-md no-underline ${light ? 'text-ivory' : 'text-ink'}`}
+    >
+      <ThetaMark tone={tone} size={30} />
+      <span className="font-display text-[1.6rem] font-medium leading-none tracking-[-0.015em]">Lyceo</span>
     </Link>
+  )
+}
+
+export function ThetaMark({ tone = 'dark', size = 30 }: { tone?: 'dark' | 'light'; size?: number }) {
+  const light = tone === 'light'
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <circle
+        cx="32"
+        cy="32"
+        r="29.5"
+        fill={light ? 'rgba(246,241,231,0.08)' : '#1f3b2d'}
+        stroke={light ? '#f6f1e7' : '#c2a15a'}
+        strokeWidth="3"
+      />
+      <ellipse cx="32" cy="32" rx="11" ry="15" fill="none" stroke="#f6f1e7" strokeWidth="4.5" />
+      <path d="M23 32h18" stroke="#f6f1e7" strokeWidth="4" strokeLinecap="round" />
+    </svg>
   )
 }

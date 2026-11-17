@@ -68,8 +68,8 @@ const LEAVES = Array.from({ length: 9 }, (_, i) => 118 + i * 15)
 export function TheoMedallion({ size = 160 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className="block drop-shadow-[0_14px_18px_rgba(28,39,51,0.22)]">
-      <circle cx="50" cy="50" r="31" fill="#2b6cb0" />
-      <circle cx="50" cy="50" r="31" fill="none" stroke="#c9a84c" strokeWidth="2.5" />
+      <circle cx="50" cy="50" r="31" fill="#1f3b2d" />
+      <circle cx="50" cy="50" r="31" fill="none" stroke="#c2a15a" strokeWidth="2.5" />
       {[1, -1].map((side) =>
         LEAVES.map((deg) => {
           const a = ((side === 1 ? deg : 180 - deg) * Math.PI) / 180
@@ -77,12 +77,12 @@ export function TheoMedallion({ size = 160 }: { size?: number }) {
           const y = 50 + Math.sin(a) * 41
           const rot = (side === 1 ? deg : 180 - deg) + 90 + side * 28
           return (
-            <ellipse key={`${side}${deg}`} cx={x} cy={y} rx="2.6" ry="6.4" fill="#c9a84c" transform={`rotate(${rot} ${x} ${y})`} />
+            <ellipse key={`${side}${deg}`} cx={x} cy={y} rx="2.6" ry="6.4" fill="#c2a15a" transform={`rotate(${rot} ${x} ${y})`} />
           )
         }),
       )}
-      <ellipse cx="50" cy="50" rx="10" ry="14" fill="none" stroke="#faf6ee" strokeWidth="4" />
-      <path d="M42 50h16" stroke="#faf6ee" strokeWidth="3.6" strokeLinecap="round" />
+      <ellipse cx="50" cy="50" rx="10" ry="14" fill="none" stroke="#f6f1e7" strokeWidth="4" />
+      <path d="M42 50h16" stroke="#f6f1e7" strokeWidth="3.6" strokeLinecap="round" />
     </svg>
   )
 }

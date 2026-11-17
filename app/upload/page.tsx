@@ -113,7 +113,7 @@ export default function Upload() {
             if (!busy) choose(e.dataTransfer.files[0])
           }}
           className={`rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gold ${
-            dragging ? 'border-aegean bg-aegean/5' : 'border-line bg-[#fffdf8]'
+            dragging ? 'border-forest bg-forest/5' : 'border-line bg-[#fffdf8]'
           }`}
         >
           <input
@@ -132,7 +132,7 @@ export default function Upload() {
                 {audio ? 'Recording' : 'PDF'}, {(file.size / 1024 / 1024).toFixed(1)} MB
               </p>
               {!busy && (
-                <button className="mt-3 text-aegean underline underline-offset-4" onClick={() => inputRef.current?.click()}>
+                <button className="mt-3 text-forest underline underline-offset-4" onClick={() => inputRef.current?.click()}>
                   Choose a different file
                 </button>
               )}
@@ -163,11 +163,11 @@ export default function Upload() {
               return (
                 <li key={s.id} className="flex items-center gap-3">
                   {state === 'active' ? (
-                    <span className="spinner text-aegean" />
+                    <span className="spinner text-forest" />
                   ) : (
                     <span
                       className={`flex h-[1.1rem] w-[1.1rem] items-center justify-center rounded-full text-[0.7rem] font-bold ${
-                        state === 'done' ? 'bg-teal text-white' : 'border-2 border-line'
+                        state === 'done' ? 'bg-moss text-white' : 'border-2 border-line'
                       }`}
                       aria-hidden="true"
                     >

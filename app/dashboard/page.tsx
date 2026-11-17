@@ -99,7 +99,7 @@ export default function Dashboard() {
           {!learner?.styleId && (
             <p className="mt-8 text-ink-soft">
               Before you start,{' '}
-              <Link href="/profile" className="text-aegean underline underline-offset-4">
+              <Link href="/profile" className="text-forest underline underline-offset-4">
                 tell Theo how you like to learn
               </Link>
               .
@@ -127,9 +127,9 @@ export default function Dashboard() {
       </div>
 
       {!learner?.styleId && (
-        <p className="mt-6 rounded-lg border-l-4 border-gold bg-parchment-deep px-4 py-3">
+        <p className="mt-6 rounded-lg border-l-4 border-gold bg-ivory-deep px-4 py-3">
           Theo doesn&apos;t know how you like to learn yet.{' '}
-          <Link href="/profile" className="font-bold text-aegean underline underline-offset-4">
+          <Link href="/profile" className="font-bold text-forest underline underline-offset-4">
             Set your learning style
           </Link>{' '}
           and your next lesson will be written for it.
@@ -145,7 +145,7 @@ export default function Dashboard() {
             <Stat
               label="Right on the first try"
               value={learner.firstTryAccuracy === null ? '–' : `${Math.round(learner.firstTryAccuracy * 100)}%`}
-              tone="text-teal"
+              tone="text-moss"
             />
             <Stat label="Ideas checked" value={String(learner.conceptsSeen)} />
             <Stat label="Pace" value={PACE_LABEL[learner.pace]} />
@@ -157,7 +157,7 @@ export default function Dashboard() {
               <h3 className="font-sans text-[1.05rem] font-bold">Worth reviewing</h3>
               <ul className="mt-3 space-y-3">
                 {[...reviewByCourse.entries()].map(([courseId, { title, concepts }]) => (
-                  <li key={courseId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-parchment px-4 py-3">
+                  <li key={courseId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ivory px-4 py-3">
                     <div>
                       <p className="font-medium">{concepts.join(', ')}</p>
                       <p className="text-[0.92rem] text-ink-soft">From {title}</p>
@@ -206,13 +206,13 @@ export default function Dashboard() {
                     className="group flex items-center justify-between gap-4 py-4 no-underline"
                   >
                     <div>
-                      <p className="font-display text-[1.15rem] font-semibold group-hover:text-aegean">{title}</p>
+                      <p className="font-display text-[1.15rem] font-semibold group-hover:text-forest">{title}</p>
                       <p className="mt-0.5 text-[0.92rem] text-ink-soft">
                         {isReview ? 'Review lesson, ' : ''}
                         {lesson.segments.length} {lesson.segments.length === 1 ? 'part' : 'parts'}, about {lesson.estimatedMinutes} min. Made {date}.
                       </p>
                     </div>
-                    <span className="text-aegean opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
+                    <span className="text-forest opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">
                       Open
                     </span>
                   </Link>

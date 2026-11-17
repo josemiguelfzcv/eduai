@@ -279,7 +279,7 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
         )}
         {phase !== 'ready' && (
           <button
-            className="ml-auto rounded text-aegean underline decoration-1 underline-offset-4"
+            className="ml-auto rounded text-forest underline decoration-1 underline-offset-4"
             onClick={() => setShowTranscript((v) => !v)}
             aria-expanded={showTranscript}
           >
@@ -360,8 +360,8 @@ export function LessonPlayer({ lesson, courseId, demo = false }: { lesson: Lesso
               <p className="text-ink-soft">
                 You answered: <span className="text-ink">{answer}</span>
               </p>
-              <div className={`mt-4 border-l-4 pl-4 ${grade.correct ? 'border-teal' : 'border-terracotta'}`}>
-                <p className={`font-bold ${grade.correct ? 'text-teal' : 'text-terracotta'}`}>
+              <div className={`mt-4 border-l-4 pl-4 ${grade.correct ? 'border-moss' : 'border-terracotta'}`}>
+                <p className={`font-bold ${grade.correct ? 'text-moss' : 'text-terracotta'}`}>
                   {grade.correct ? 'You got it.' : 'Not quite yet.'}
                 </p>
                 <p className="mt-1 max-w-[65ch]">{grade.feedback}</p>
@@ -408,7 +408,7 @@ function Progress({ count, index, results }: { count: number; index: number; res
     <ol className="mt-4 flex gap-1.5" aria-label="Lesson progress">
       {Array.from({ length: count }, (_, i) => {
         const r = results[i]?.firstTryCorrect
-        const color = r === true ? 'bg-teal' : r === false ? 'bg-terracotta' : i === index ? 'bg-gold' : 'bg-line'
+        const color = r === true ? 'bg-moss' : r === false ? 'bg-terracotta' : i === index ? 'bg-gold' : 'bg-line'
         const label = r === true ? 'got it first try' : r === false ? 'needed help' : i === index ? 'current' : 'not started'
         return (
           <li key={i} className={`h-1.5 flex-1 rounded-full ${color}`}>
@@ -445,7 +445,7 @@ function TailoredNote({ p }: { p: Personalization }) {
     <p className="mt-10 max-w-[70ch] text-[0.95rem] text-ink-soft">
       Written for you: this lesson {parts.join(', ')}
       {p.focusConcepts.length ? `, and takes extra care with ${p.focusConcepts.slice(0, 2).join(' and ')}` : ''}.{' '}
-      <Link href="/profile" className="text-aegean underline underline-offset-4">
+      <Link href="/profile" className="text-forest underline underline-offset-4">
         Change how Theo teaches you
       </Link>
     </p>
@@ -495,7 +495,7 @@ function Summary({
           return (
             <li key={i} className="flex items-center justify-between gap-4 px-5 py-3">
               <span>{s.concept}</span>
-              <span className={`text-[0.95rem] ${r === true ? 'text-teal' : r === false ? 'text-terracotta' : 'text-ink-soft'}`}>
+              <span className={`text-[0.95rem] ${r === true ? 'text-moss' : r === false ? 'text-terracotta' : 'text-ink-soft'}`}>
                 {r === true ? 'Got it first try' : r === false ? 'Needed a second explanation' : 'Skipped'}
               </span>
             </li>

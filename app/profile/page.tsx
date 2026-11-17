@@ -80,7 +80,7 @@ export default function Profile() {
                 <label
                   key={s.id}
                   className={`cursor-pointer rounded-xl border-2 p-4 transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gold ${
-                    style === s.id ? 'border-aegean bg-aegean/5' : 'border-line bg-[#fffdf8] hover:border-ink-soft'
+                    style === s.id ? 'border-forest bg-forest/5' : 'border-line bg-[#fffdf8] hover:border-ink-soft'
                   }`}
                 >
                   <input
@@ -102,7 +102,7 @@ export default function Profile() {
             <button type="submit" className="btn btn-primary px-6" disabled={status === 'saving'}>
               {status === 'saving' ? 'Saving' : 'Save'}
             </button>
-            {status === 'saved' && <p className="text-teal">Saved. Your next lesson will use this.</p>}
+            {status === 'saved' && <p className="text-moss">Saved. Your next lesson will use this.</p>}
             {status === 'error' && <p className="text-terracotta">Couldn&apos;t save. Check your connection and try again.</p>}
           </div>
         </form>

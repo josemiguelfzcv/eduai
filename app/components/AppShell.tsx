@@ -56,7 +56,7 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
                 href={item.href}
                 aria-current={pathname === item.href ? 'page' : undefined}
                 className={`rounded-md px-3 py-1.5 no-underline transition-colors ${
-                  pathname === item.href ? 'bg-parchment-deep font-bold text-ink' : 'text-ink-soft hover:text-ink'
+                  pathname === item.href ? 'bg-ivory-deep font-bold text-ink' : 'text-ink-soft hover:text-ink'
                 }`}
               >
                 {item.label}
@@ -76,7 +76,7 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
 export function LoadingNote({ children }: { children: React.ReactNode }) {
   return (
     <p className="flex items-center gap-3 text-ink-soft">
-      <span className="spinner text-aegean" />
+      <span className="spinner text-forest" />
       {children}
     </p>
   )

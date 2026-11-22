@@ -10,9 +10,8 @@
 //      STAGING_SERVER_DATABASE_URL (lyceo_server; optional), LYCEO_MATERIALS_* and STAGING_APP_ORIGIN (optional),
 //      TEST_C_EMAIL, TEST_C_PASSWORD (a disposable user, only with --delete-test-user-c: it gets deleted).
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { GetBucketLifecycleConfigurationCommand, S3Client } from '@aws-sdk/client-s3'
+import { GetBucketLifecycleConfigurationCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { PutObjectCommand } from '@aws-sdk/client-s3'
 import postgres from 'postgres'
 
 type Result = { check: string; result: 'PASS' | 'FAIL' | 'SKIP'; detail: string }
@@ -257,7 +256,8 @@ async function storage(userId: string) {
   if (!bucket || !endpoint || !accessKeyId || !secretAccessKey)
     return report('private storage', null, 'LYCEO_MATERIALS_* not set')
   const materials = await import('../app/lib/server/materials')
-  const s3 = new S3Client({ region: 'auto', endpoint, credentials: { accessKeyId, secretAccessKey } })
+  // The app's own client settings, so this signs uploads exactly the way the app does.
+  const s3 = materials.r2Client(endpoint, accessKeyId, secretAccessKey)
   const pdf = new Uint8Array(4096)
   pdf.set(new TextEncoder().encode('%PDF-1.7\n'))
   const id = 999_000_000 + Math.floor(Math.random() * 999_999)

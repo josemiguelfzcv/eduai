@@ -90,13 +90,27 @@ export interface MaterialStore {
   removePrefix(prefix: string): Promise<number>
 }
 
+/**
+ * An S3 client for R2 that adds checksums only where an operation requires one. With the SDK's default, a presigned
+ * upload URL carries the checksum of an empty body (x-amz-checksum-crc32=AAAAAA==), so R2 would reject every real file.
+ */
+export function r2Client(endpoint: string, accessKeyId: string, secretAccessKey: string) {
+  return new S3Client({
+    region: 'auto',
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+  })
+}
+
 function r2Store(): MaterialStore | null {
   const bucket = process.env.LYCEO_MATERIALS_BUCKET
   const endpoint = process.env.LYCEO_MATERIALS_R2_ENDPOINT || process.env.CLOUDFLARE_R2_ENDPOINT
   const accessKeyId = process.env.LYCEO_MATERIALS_R2_ACCESS_KEY_ID
   const secretAccessKey = process.env.LYCEO_MATERIALS_R2_SECRET_ACCESS_KEY
   if (!bucket || !endpoint || !accessKeyId || !secretAccessKey) return null
-  const s3 = new S3Client({ region: 'auto', endpoint, credentials: { accessKeyId, secretAccessKey } })
+  const s3 = r2Client(endpoint, accessKeyId, secretAccessKey)
   const missing = (err: unknown) =>
     (err as { name?: string })?.name === 'NotFound' ||
     (err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode === 404

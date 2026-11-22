@@ -322,7 +322,16 @@ async function storage(userId: string) {
       rule ? `${rule.Expiration?.Days} days` : 'no rule for incoming/',
     )
   } catch (err) {
-    report('abandoned uploads expire', false, code(err))
+    // The app's token reaches only the objects in its bucket, and R2 counts lifecycle rules as bucket settings, which
+    // need an account-wide admin token. A refusal is therefore expected: the rule is checked in the dashboard instead.
+    const denied =
+      (err as { name?: string })?.name === 'AccessDenied' ||
+      (err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode === 403
+    report(
+      'abandoned uploads expire',
+      denied ? null : false,
+      denied ? 'the bucket-scoped token cannot read bucket settings; check the rule in the dashboard' : code(err),
+    )
   }
   const removed = await materials.deleteAllFilesOf(userId)
   report("deleting a student's files", removed >= 1, `${removed} removed`)

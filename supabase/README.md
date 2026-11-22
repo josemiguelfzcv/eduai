@@ -5,7 +5,7 @@
 | `migrations/0001_my_academy.sql` | Courses and deadlines (My Academy) | Production when approved; staging via `npm run db:migrate:staging` |
 | `migrations/0002`–`0004` | Learning loop, trusted server path, account deletion | **Staging only** until the schema review is approved |
 | `staging/0000_baseline.sql` | Production's original tables, reconstructed | Staging and local tests only, never production |
-| `checks/rls_audit.sql` | Read-only audit of tables, grants, policies, functions | Safe anywhere, including production |
+| `checks/rls_audit.sql` | Read-only audit: tables, RLS and policies, effective privileges, columns, constraints, indexes, views, functions (source and grants), triggers, extensions. Compare two results with `node scripts/db/compare-audit.mjs <expected> <actual>` | Safe anywhere, including production |
 | `tests/supabase_shim.sql` | Roles and `auth` functions of a Supabase project | Local Postgres and CI only |
 
 ## Who can do what

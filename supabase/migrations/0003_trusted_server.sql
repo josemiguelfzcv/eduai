@@ -22,8 +22,9 @@ end
 $$;
 alter role lyceo_server set statement_timeout = '5s';
 grant usage on schema private to lyceo_server;
--- Functions added to private later aren't executable by everyone either, even if a migration forgets to revoke it.
-alter default privileges in schema private revoke execute on functions from public;
+-- Postgres lets everyone execute a new function, and a per-schema default can't take that away (it only adds to the
+-- global defaults). So every migration that adds a function here must revoke it from public, as the end of this file
+-- does; tests/db fails if any function in private is executable by anyone but lyceo_server.
 
 -- Usage and limits -----------------------------------------------------------------------------------------------
 

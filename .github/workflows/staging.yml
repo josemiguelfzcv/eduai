@@ -1,0 +1,62 @@
+name: Staging database
+
+# Manual only. Runs in the "staging" environment, so it waits for a reviewer's approval and only sees staging secrets.
+# This repository is public, so these logs are too: the scripts print file names and PASS/FAIL, never data.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: plan shows what would run; migrate applies it; check verifies staging
+        type: choice
+        options: [plan, migrate, check, migrate-and-check]
+        default: plan
+      delete_test_user_c:
+        description: Also delete test user C to verify account deletion (recreate C afterwards)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-database
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    env:
+      PRODUCTION_SUPABASE_REF: ${{ vars.PRODUCTION_SUPABASE_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Plan or apply migrations
+        if: inputs.action != 'check'
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: node scripts/db/migrate.mjs --i-am-on-staging ${{ inputs.action == 'plan' && '--dry-run' || '' }}
+      - name: Check staging
+        if: contains(inputs.action, 'check')
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_SERVER_DATABASE_URL: ${{ secrets.STAGING_SERVER_DATABASE_URL }}
+          TEST_A_EMAIL: ${{ secrets.STAGING_TEST_A_EMAIL }}
+          TEST_A_PASSWORD: ${{ secrets.STAGING_TEST_A_PASSWORD }}
+          TEST_B_EMAIL: ${{ secrets.STAGING_TEST_B_EMAIL }}
+          TEST_B_PASSWORD: ${{ secrets.STAGING_TEST_B_PASSWORD }}
+          TEST_C_EMAIL: ${{ secrets.STAGING_TEST_C_EMAIL }}
+          TEST_C_PASSWORD: ${{ secrets.STAGING_TEST_C_PASSWORD }}
+          LYCEO_MATERIALS_BUCKET: ${{ secrets.STAGING_MATERIALS_BUCKET }}
+          LYCEO_MATERIALS_R2_ENDPOINT: ${{ secrets.STAGING_MATERIALS_R2_ENDPOINT }}
+          LYCEO_MATERIALS_R2_ACCESS_KEY_ID: ${{ secrets.STAGING_MATERIALS_R2_ACCESS_KEY_ID }}
+          LYCEO_MATERIALS_R2_SECRET_ACCESS_KEY: ${{ secrets.STAGING_MATERIALS_R2_SECRET_ACCESS_KEY }}
+          LYCEO_SERVER_DATABASE_URL: ${{ secrets.STAGING_SERVER_DATABASE_URL }}
+          STAGING_APP_ORIGIN: ${{ vars.STAGING_APP_ORIGIN }}
+        run: npm run check:staging -- --i-am-on-staging ${{ inputs.delete_test_user_c && '--delete-test-user-c' || '' }}

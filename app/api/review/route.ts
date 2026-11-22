@@ -44,7 +44,12 @@ export async function POST(req: NextRequest) {
     }
 
     const personalization = personalizationFor(await loadLearner(db, user.id))
-    const draft = await writeReview({ courseTitle: course.lesson.title, missed, student: personalization })
+    const draft = await writeReview({
+      courseTitle: course.lesson.title,
+      missed,
+      student: personalization,
+      userId: user.id,
+    })
     const lesson: Lesson = {
       ...draft,
       meta: { version: 2, kind: 'review', personalization, sourceCourseId: course.id },

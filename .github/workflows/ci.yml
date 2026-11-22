@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, redesign]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-anon-key
+      CLOUDFLARE_R2_ENDPOINT: https://example.r2.cloudflarestorage.com
+      CLOUDFLARE_R2_BUCKET: ci-bucket
+      # Fake, unique values: the bundle check fails if any of them reaches the browser.
+      ANTHROPIC_API_KEY: ci-sentinel-anthropic-7f3a9c
+      OPENAI_API_KEY: ci-sentinel-openai-2b8d41
+      ELEVENLABS_API_KEY: ci-sentinel-elevenlabs-c5e0a2
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ci-sentinel-r2-access-91d7b3
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ci-sentinel-r2-secret-4ae6f0
+      UPLOADTHING_TOKEN: ci-sentinel-uploadthing-0c3b5d
+      LYCEO_TTS_SECRET: ci-sentinel-tts-8e2f17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: No secrets in the client bundle
+        run: npm run check:bundle

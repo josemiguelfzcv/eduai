@@ -1,0 +1,37 @@
+name: Model benchmark
+
+# Manual only. Needs a repository secret ANTHROPIC_API_KEY (ideally a separate key with a spend limit).
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: Comma-separated Claude model ids
+        default: claude-sonnet-4-6,claude-sonnet-5-5,claude-haiku-5-5
+      repeat:
+        description: How many times to run each case
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run bench
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BENCH_MODELS: ${{ inputs.models }}
+          BENCH_REPEAT: ${{ inputs.repeat }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-results
+          path: bench/out

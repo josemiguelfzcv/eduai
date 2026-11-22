@@ -1,3 +1,4 @@
+import 'server-only'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'

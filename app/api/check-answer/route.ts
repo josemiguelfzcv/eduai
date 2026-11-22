@@ -39,7 +39,13 @@ export async function POST(req: NextRequest) {
     if (!segment) throw new HttpError(404, 'That part of the lesson does not exist.')
 
     const cleanAnswer = answer.trim().slice(0, demo ? 400 : 1500)
-    const grade = await gradeAnswer({ segment, answer: cleanAnswer, styleId, missedBefore })
+    const grade = await gradeAnswer({
+      segment,
+      answer: cleanAnswer,
+      styleId,
+      missedBefore,
+      userId: auth?.user.id ?? null,
+    })
 
     if (auth) {
       const { error } = await auth.db.from('session_events').insert({

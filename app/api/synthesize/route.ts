@@ -20,7 +20,12 @@ export async function POST(req: NextRequest) {
 
     const learner = await loadLearner(db, auth.user.id)
     const personalization = personalizationFor(learner)
-    const draft = await writeLesson({ courseTitle: course.title, material: text, student: personalization })
+    const draft = await writeLesson({
+      courseTitle: course.title,
+      material: text,
+      student: personalization,
+      userId: auth.user.id,
+    })
     const lesson: Lesson = { ...draft, meta: { version: 2, kind: 'lesson', personalization } }
 
     const { error } = await db.from('courses').update({ script: lesson, status: 'ready' }).eq('id', courseId)

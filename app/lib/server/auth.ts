@@ -1,3 +1,4 @@
+import 'server-only'
 import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 
@@ -19,7 +20,12 @@ function clientFor(token: string) {
 }
 
 function bearer(req: Request) {
-  return req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() || null
+  return (
+    req.headers
+      .get('authorization')
+      ?.replace(/^Bearer\s+/i, '')
+      .trim() || null
+  )
 }
 
 export async function requireUser(req: Request): Promise<{ user: User; db: SupabaseClient }> {
@@ -52,7 +58,12 @@ export function assertUploadUrl(fileUrl: unknown): string {
     throw new HttpError(400, 'That file link is not valid.')
   }
   const host = url.hostname
-  const allowed = host.endsWith('.ufs.sh') || host === 'utfs.io' || host.endsWith('.utfs.io') || host.endsWith('uploadthing.com')
+  const allowed =
+    host.endsWith('.ufs.sh') ||
+    host === 'utfs.io' ||
+    host.endsWith('.utfs.io') ||
+    host === 'uploadthing.com' ||
+    host.endsWith('.uploadthing.com')
   if (url.protocol !== 'https:' || !allowed) throw new HttpError(400, 'Files must be uploaded through Lyceo.')
   return url.toString()
 }

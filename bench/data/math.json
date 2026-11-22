@@ -1,0 +1,23 @@
+{
+  "note": "Problems with exact numeric answers, to measure mathematical accuracy without tools.",
+  "problems": [
+    { "id": "die-six", "question": "A fair six-sided die is rolled 4 times. What is the probability of getting at least one six?", "answer": 0.517747, "tolerance": 0.001 },
+    { "id": "birthday", "question": "In a room of 23 people, assuming 365 equally likely birthdays and no leap years, what is the probability that at least two people share a birthday?", "answer": 0.507297, "tolerance": 0.001 },
+    { "id": "uniform-square", "question": "X is uniform on (0, 1) and Y = X^2. What is P(Y <= 0.25)?", "answer": 0.5, "tolerance": 0.001 },
+    { "id": "binomial-var", "question": "X follows a Binomial distribution with n = 10 and p = 0.3. What is Var(X)?", "answer": 2.1, "tolerance": 0.001 },
+    { "id": "poisson-zero", "question": "X follows a Poisson distribution with mean 2. What is P(X = 0)?", "answer": 0.135335, "tolerance": 0.0005 },
+    { "id": "bayes-test", "question": "A disease has prevalence 1%. A test has sensitivity 95% and a false positive rate of 10%. What is the probability of having the disease given a positive test?", "answer": 0.087558, "tolerance": 0.001 },
+    { "id": "die-square", "question": "What is E[X^2] for a single roll of a fair six-sided die?", "answer": 15.166667, "tolerance": 0.001 },
+    { "id": "exp-tail", "question": "X is exponential with rate 0.5. What is P(X > 3)?", "answer": 0.22313, "tolerance": 0.0005 },
+    { "id": "integral", "question": "Compute the integral of x^2 from 0 to 1.", "answer": 0.333333, "tolerance": 0.001 },
+    { "id": "geometric-mean", "question": "X is the number of trials until the first success, with success probability 0.2 on each independent trial. What is E[X]?", "answer": 5, "tolerance": 0.001 },
+    { "id": "standard-error", "question": "A population has standard deviation 10. What is the standard error of the sample mean for samples of size 25?", "answer": 2, "tolerance": 0.001 },
+    { "id": "choose", "question": "In how many ways can you choose 3 people from a group of 10?", "answer": 120, "tolerance": 0.001 },
+    { "id": "uniform-sum-var", "question": "X and Y are independent and each uniform on (0, 1). What is Var(X + Y)?", "answer": 0.166667, "tolerance": 0.001 },
+    { "id": "exp-second-moment", "question": "X is exponential with rate 2. What is E[X^2]?", "answer": 0.5, "tolerance": 0.001 },
+    { "id": "normal-tail", "question": "X is normal with mean 100 and standard deviation 15. What is P(X > 130)?", "answer": 0.02275, "tolerance": 0.0005 },
+    { "id": "five-heads", "question": "You flip a fair coin 10 times. What is the probability of exactly 5 heads?", "answer": 0.246094, "tolerance": 0.001 },
+    { "id": "density-mean", "question": "X has density f(x) = 3x^2 on [0, 1]. What is E[X]?", "answer": 0.75, "tolerance": 0.001 },
+    { "id": "marbles", "question": "A bag has 4 red and 6 blue marbles. You draw 2 without replacement. What is the probability that both are red?", "answer": 0.133333, "tolerance": 0.001 }
+  ]
+}

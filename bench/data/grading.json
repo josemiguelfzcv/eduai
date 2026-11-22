@@ -1,0 +1,68 @@
+{
+  "note": "Check-in answers with a known right/wrong label. 'expected' is the label a careful TA would give under Lyceo's grading rules: accept the right idea even if loosely worded, reject answers missing the key idea.",
+  "segments": {
+    "conditional": {
+      "concept": "Conditional probability",
+      "narration": "Conditional probability is the chance of an event once you know another event happened. The probability of A given B is the probability of A and B together, divided by the probability of B. Knowing B shrinks the world you're looking at to just the cases where B happened.",
+      "board": ["$P(A \\mid B) = \\dfrac{P(A \\cap B)}{P(B)}$", "Knowing B shrinks the sample space"],
+      "question": "In a class, 30% of students take both stats and econ, and 50% take stats. What's the probability that a stats student also takes econ?",
+      "idealAnswer": "0.6, because 0.30 / 0.50 = 0.6"
+    },
+    "expected": {
+      "concept": "Expected value",
+      "narration": "The expected value of a random variable is its long-run average. Multiply each possible value by its probability and add them up. For a fair six-sided die that's 3.5, even though you can never actually roll a 3.5.",
+      "board": ["$E[X] = \\sum_x x \\, P(X = x)$", "Fair die: $E[X] = 3.5$"],
+      "question": "A game pays 10 dollars with probability 0.2 and nothing otherwise. What is the expected payout?",
+      "idealAnswer": "2 dollars, because 10 times 0.2 plus 0 times 0.8 is 2"
+    },
+    "standard-error": {
+      "concept": "Standard error and sample size",
+      "narration": "The standard error measures how much a sample mean bounces around from sample to sample. It equals the population standard deviation divided by the square root of the sample size. So to cut the standard error in half, you need four times as many observations.",
+      "board": ["$SE = \\sigma / \\sqrt{n}$", "Half the SE needs 4 times the n"],
+      "question": "If you want to cut the standard error of a sample mean in half, how should the sample size change?",
+      "idealAnswer": "Multiply the sample size by 4, because the standard error is proportional to 1 over the square root of n"
+    },
+    "independence": {
+      "concept": "Independent events",
+      "narration": "Two events are independent when knowing that one happened doesn't change the chance of the other. Then the probability of both is the product of their probabilities. Coin flips are the classic example: the coin has no memory.",
+      "board": ["$P(A \\cap B) = P(A)\\,P(B)$", "A coin has no memory"],
+      "question": "A fair coin landed heads five times in a row. What's the probability that the next flip is heads, and why?",
+      "idealAnswer": "1/2, because flips are independent: past flips don't change the next one"
+    },
+    "base-rate": {
+      "concept": "Base rates and Bayes' rule",
+      "narration": "Bayes' rule turns a conditional probability around. With a rare disease, even an accurate test produces many false positives, because there are so many more healthy people being tested. That's why the base rate matters so much.",
+      "board": ["$P(D \\mid +) = \\dfrac{P(+ \\mid D)P(D)}{P(+)}$", "Rare disease: most positives are false"],
+      "question": "A disease affects 1 in 1,000 people. A test catches 99% of cases but also flags 5% of healthy people. Roughly what's the chance that someone who tests positive actually has the disease?",
+      "idealAnswer": "About 2%, since 0.99 x 0.001 / (0.99 x 0.001 + 0.05 x 0.999) is about 0.019"
+    }
+  },
+  "cases": [
+    { "id": "cond-1", "segment": "conditional", "answer": "0.6", "expected": true, "kind": "numeric" },
+    { "id": "cond-2", "segment": "conditional", "answer": "60%", "expected": true, "kind": "numeric format" },
+    { "id": "cond-3", "segment": "conditional", "answer": "its 0.3 divided by 0.5 so about .6", "expected": true, "kind": "loose wording" },
+    { "id": "cond-4", "segment": "conditional", "answer": "0.15", "expected": false, "kind": "multiplied instead of divided" },
+    { "id": "cond-5", "segment": "conditional", "answer": "0.3", "expected": false, "kind": "joint instead of conditional" },
+    { "id": "cond-6", "segment": "conditional", "answer": "idk", "expected": false, "kind": "no attempt" },
+    { "id": "ev-1", "segment": "expected", "answer": "$2", "expected": true, "kind": "numeric" },
+    { "id": "ev-2", "segment": "expected", "answer": "2.00", "expected": true, "kind": "numeric format" },
+    { "id": "ev-3", "segment": "expected", "answer": "10 times 0.2 plus 0 times 0.8, which is 2", "expected": true, "kind": "worked" },
+    { "id": "ev-4", "segment": "expected", "answer": "10", "expected": false, "kind": "maximum instead of mean" },
+    { "id": "ev-5", "segment": "expected", "answer": "0.2", "expected": false, "kind": "probability instead of value" },
+    { "id": "ev-6", "segment": "expected", "answer": "you usually win nothing, so 0", "expected": false, "kind": "most likely value instead of mean" },
+    { "id": "se-1", "segment": "standard-error", "answer": "quadruple it", "expected": true, "kind": "short" },
+    { "id": "se-2", "segment": "standard-error", "answer": "make n 4 times bigger since SE goes like 1/sqrt(n)", "expected": true, "kind": "worked" },
+    { "id": "se-3", "segment": "standard-error", "answer": "double the sample size", "expected": false, "kind": "common misconception" },
+    { "id": "se-4", "segment": "standard-error", "answer": "increase it", "expected": false, "kind": "missing the key quantity" },
+    { "id": "se-5", "segment": "standard-error", "answer": "halve the sample size", "expected": false, "kind": "wrong direction" },
+    { "id": "ind-1", "segment": "independence", "answer": "50%, the flips are independent", "expected": true, "kind": "short" },
+    { "id": "ind-2", "segment": "independence", "answer": "1/2 since past flips don't affect the next one", "expected": true, "kind": "worked" },
+    { "id": "ind-3", "segment": "independence", "answer": "less than half, tails is due", "expected": false, "kind": "gambler's fallacy" },
+    { "id": "ind-4", "segment": "independence", "answer": "1/64", "expected": false, "kind": "probability of the whole run" },
+    { "id": "br-1", "segment": "base-rate", "answer": "about 2%", "expected": true, "kind": "numeric" },
+    { "id": "br-2", "segment": "base-rate", "answer": "roughly 0.019", "expected": true, "kind": "numeric" },
+    { "id": "br-3", "segment": "base-rate", "answer": "it's low, around 2 percent, because most positives come from the many healthy people", "expected": true, "kind": "worked" },
+    { "id": "br-4", "segment": "base-rate", "answer": "99%", "expected": false, "kind": "confuses the test's accuracy with the answer" },
+    { "id": "br-5", "segment": "base-rate", "answer": "95%", "expected": false, "kind": "one minus the false positive rate" }
+  ]
+}

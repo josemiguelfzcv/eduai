@@ -1,3 +1,4 @@
+import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeLesson, type LearnerSummary, type Pace, type Personalization } from '../lesson'
 import { normalizeMajor } from '../learning-styles'

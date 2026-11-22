@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { DEMO_LESSON } from '../../lib/demo-lesson'
 import { errorResponse, HttpError, requireUser } from '../../lib/server/auth'
+import { recordUsage } from '../../lib/server/usage'
 import {
   cacheKey,
   cachedUrl,
@@ -27,10 +28,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'This audio link is not valid.' }, { status: 403 })
   }
 
+  const started = Date.now()
+  const usage = { task: 'tts', provider: 'elevenlabs', model: TTS_MODEL, characters: text.length } as const
   try {
     const key = cacheKey(text)
     const cached = await cachedUrl(key)
     if (cached) {
+      recordUsage({ ...usage, cached: true, latencyMs: Date.now() - started, ok: true })
       return NextResponse.redirect(cached, { status: 302, headers: { 'Cache-Control': 'no-store' } })
     }
 
@@ -39,6 +43,7 @@ export async function GET(req: NextRequest) {
       modelId: TTS_MODEL,
       outputFormat: 'mp3_44100_128',
     })
+    recordUsage({ ...usage, latencyMs: Date.now() - started, ok: true })
     const [toClient, toCache] = audio.tee()
     const saving = new Response(toCache)
       .arrayBuffer()
@@ -50,6 +55,7 @@ export async function GET(req: NextRequest) {
       headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
     })
   } catch (err) {
+    recordUsage({ ...usage, latencyMs: Date.now() - started, ok: false })
     return errorResponse(err, 'Could not generate audio.')
   }
 }

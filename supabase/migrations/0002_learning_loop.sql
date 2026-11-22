@@ -240,9 +240,9 @@ drop policy if exists "study_sessions_select" on public.study_sessions;
 create policy "study_sessions_select" on public.study_sessions for select to authenticated
   using (user_id = (select auth.uid()));
 
--- session_events keeps its existing policies (see rls_audit.sql), so lesson check-ins keep working on main. These
--- restrictive policies are added on top: whatever the existing ones allow, a student can only write plain lesson
--- check-ins, and can't change or delete evidence that came from a study session.
+-- session_events keeps its owner policy from 0000, so lesson check-ins keep working on main. These restrictive
+-- policies are added on top: whatever that one allows, a student can only write plain lesson check-ins, and can't
+-- change or delete evidence that came from a study session.
 drop policy if exists "session_events_students_write_checkins_only" on public.session_events;
 create policy "session_events_students_write_checkins_only" on public.session_events
   as restrictive for insert to authenticated

@@ -53,5 +53,6 @@ begin
 end
 $$;
 
-revoke all on function public.delete_my_account() from public, anon;
+-- Production grants new functions in public to every API role by default, so all of them are revoked explicitly.
+revoke all on function public.delete_my_account() from public, anon, service_role;
 grant execute on function public.delete_my_account() to authenticated;

@@ -43,7 +43,8 @@ export type TestDb = {
   close: () => Promise<void>
 }
 
-export async function createTestDb(): Promise<TestDb> {
+/** `before`: stop applying migrations at this file (e.g. '0000_secure_legacy_tables.sql' to get production as it was). */
+export async function createTestDb(options: { before?: string } = {}): Promise<TestDb> {
   if (!TEST_URL) throw new Error('TEST_DATABASE_URL is not set')
   const name = `lyceo_test_${randomBytes(4).toString('hex')}`
   const root = postgres(TEST_URL, { max: 1, ...quiet })
@@ -64,7 +65,8 @@ export async function createTestDb(): Promise<TestDb> {
   await admin.unsafe(readFileSync(SHIM, 'utf8'))
 
   const migrator = postgres(withUser(TEST_URL, 'migrator', 'migrator', name), { max: 1, ...quiet })
-  for (const file of [BASELINE, ...MIGRATIONS]) {
+  const migrations = options.before ? MIGRATIONS.filter((f) => f.split('/').pop()! < options.before!) : MIGRATIONS
+  for (const file of [BASELINE, ...migrations]) {
     try {
       await migrator.unsafe(readFileSync(file, 'utf8'))
     } catch (err) {
@@ -73,8 +75,9 @@ export async function createTestDb(): Promise<TestDb> {
   }
   await migrator.end()
 
-  // Locally only: give the server role a password so tests can log in as it.
-  await admin.unsafe(`alter role lyceo_server with login password 'lyceo-test'`)
+  // Locally only: give the server role a password so tests can log in as it (once 0003 has created it).
+  const [{ exists }] = await admin`select exists (select 1 from pg_roles where rolname = 'lyceo_server') as exists`
+  if (exists) await admin.unsafe(`alter role lyceo_server with login password 'lyceo-test'`)
   const serverUrl = withUser(TEST_URL, 'lyceo_server', 'lyceo-test', name)
   const server = postgres(serverUrl, { max: 20, ...quiet })
 

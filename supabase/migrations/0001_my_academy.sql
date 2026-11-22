@@ -56,10 +56,9 @@ create policy "deadlines_owner" on public.deadlines
     and exists (select 1 from public.academy_courses c where c.id = course_id and c.user_id = (select auth.uid()))
   );
 
--- 5. Since 30 October 2026 Supabase no longer grants new tables to the API roles on its own, so the grants are explicit.
---    Signed-in students reach these tables as `authenticated` (row-level security above still applies); visitors get
---    nothing. On a project that created the tables before that date this only removes access visitors never needed.
-revoke all on public.academy_courses from anon;
-revoke all on public.deadlines from anon;
-grant select, insert, update, delete on public.academy_courses to authenticated;
-grant select, insert, update, delete on public.deadlines to authenticated;
+-- 5. Explicit privileges, whatever the project grants new tables by default. (Production still gives every new table in
+--    public to the API roles; newer projects give them nothing.) Signed-in students reach these tables as
+--    `authenticated`, with row-level security above; visitors get nothing; TRUNCATE, which ignores row-level security,
+--    goes too.
+revoke all on public.academy_courses, public.deadlines from anon, authenticated;
+grant select, insert, update, delete on public.academy_courses, public.deadlines to authenticated;

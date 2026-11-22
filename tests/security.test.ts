@@ -77,12 +77,65 @@ test('server routes only download files that UploadThing hosts', () => {
   }
 })
 
-test('only the Supabase URL and anon key are exposed to the browser', () => {
+test('only the Supabase URL and its public key are exposed to the browser', () => {
   const used = new Set<string>()
   for (const f of files('app', /\.(ts|tsx)$/)) {
     for (const m of read(f).matchAll(/process\.env\.(NEXT_PUBLIC_[A-Z0-9_]+)/g)) used.add(m[1])
   }
-  assert.deepEqual([...used].sort(), ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_URL'])
+  assert.deepEqual([...used].sort(), [
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_URL',
+  ])
+})
+
+test('Lyceo never uses a Supabase key that bypasses row-level security', () => {
+  // check-client-bundle.mjs names these keys only to make sure they never reach the browser.
+  const sources = [...files('app', /\.(ts|tsx)$/), ...files('scripts', /\.(m?js|ts)$/)].filter(
+    (f) => f !== 'scripts/check-client-bundle.mjs',
+  )
+  for (const f of sources) {
+    assert.ok(!/SERVICE_ROLE|SUPABASE_SECRET|sb_secret_/.test(read(f)), `${f} refers to a Supabase secret key`)
+  }
+})
+
+test('the trusted database connection is opened in one place and used only by server modules', () => {
+  const readers = files('app', /\.(ts|tsx)$/).filter((f) => read(f).includes('process.env.LYCEO_SERVER_DATABASE_URL'))
+  assert.deepEqual(readers, ['app/lib/server/trusted-db.ts'])
+  for (const f of files('app', /\.(ts|tsx)$/)) {
+    const src = read(f)
+    if (/from ['"]postgres['"]/.test(src))
+      assert.equal(f, 'app/lib/server/trusted-db.ts', `${f} opens its own database connection`)
+    if (/trusted-db['"]/.test(src))
+      assert.ok(f.startsWith('app/lib/server/'), `${f} imports the trusted connection directly`)
+  }
+})
+
+test('every paid call reserves its cost first', () => {
+  const ai = read('app/lib/server/ai.ts')
+  assert.equal((ai.match(/generateText\(/g) ?? []).length, (ai.match(/await tracked\(/g) ?? []).length)
+  assert.ok(ai.includes('reserveUsage(') && ai.includes('settleUsage('))
+  for (const r of ['app/api/speak/route.ts', 'app/api/transcribe/route.ts']) {
+    const src = read(r)
+    assert.ok(src.includes('reserveUsage(') && src.includes('settleUsage('), `${r} spends without a reservation`)
+  }
+  const grading = read('app/lib/server/grading.ts')
+  assert.equal((grading.match(/generateText\(/g) ?? []).length, (grading.match(/tracked\(/g) ?? []).length)
+})
+
+test('private uploads and account deletion only run for the signed-in owner', () => {
+  for (const r of [
+    'app/api/materials/route.ts',
+    'app/api/materials/[id]/route.ts',
+    'app/api/materials/[id]/complete/route.ts',
+  ]) {
+    const src = read(r)
+    assert.ok(src.includes('privateUploadsEnabled()'), `${r} runs where private uploads are off`)
+    assert.ok(src.includes('requireUser(') && src.includes('user.id'), `${r} isn't scoped to the student`)
+  }
+  const del = read('app/api/account/delete/route.ts')
+  assert.ok(del.includes("rpc('delete_my_account')"), 'account deletion must run as the student')
+  assert.ok(del.includes('signedInWithin('), 'account deletion must require a recent sign-in')
 })
 
 test('server modules refuse to be bundled for the browser', () => {

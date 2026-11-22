@@ -8,7 +8,8 @@ export function SetupNotice() {
         <li>Open your Supabase project and go to SQL Editor.</li>
         <li>
           Paste the contents of{' '}
-          <code className="rounded bg-ivory-deep px-1.5 py-0.5">supabase/0001_my_academy.sql</code> and click Run.
+          <code className="rounded bg-ivory-deep px-1.5 py-0.5">supabase/migrations/0001_my_academy.sql</code> and click
+          Run.
         </li>
         <li>Reload this page.</li>
       </ol>

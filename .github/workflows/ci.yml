@@ -16,6 +16,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-anon-key
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-public-publishable-key
       CLOUDFLARE_R2_ENDPOINT: https://example.r2.cloudflarestorage.com
       CLOUDFLARE_R2_BUCKET: ci-bucket
       # Fake, unique values: the bundle check fails if any of them reaches the browser.
@@ -26,6 +27,10 @@ jobs:
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ci-sentinel-r2-secret-4ae6f0
       UPLOADTHING_TOKEN: ci-sentinel-uploadthing-0c3b5d
       LYCEO_TTS_SECRET: ci-sentinel-tts-8e2f17
+      LYCEO_SERVER_DATABASE_URL: postgresql://lyceo_server:ci-sentinel-dbpass-5d1e9a@localhost:6543/postgres
+      LYCEO_MATERIALS_R2_ACCESS_KEY_ID: ci-sentinel-mat-access-3f8c20
+      LYCEO_MATERIALS_R2_SECRET_ACCESS_KEY: ci-sentinel-mat-secret-b71d04
+      LYCEO_MATERIALS_BUCKET: ci-materials
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,3 +44,26 @@ jobs:
       - run: npm run build
       - name: No secrets in the client bundle
         run: npm run check:bundle
+
+  # The staging schema's security properties, on a throwaway Postgres shaped like Supabase (tests/db).
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:db

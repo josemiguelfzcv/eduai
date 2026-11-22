@@ -2,7 +2,7 @@
 --
 -- Additive only. The production app (which never reads these columns or tables)
 -- keeps working before and after this runs, and running it twice is safe.
--- Run it in Supabase: SQL Editor -> New query -> paste -> Run.
+-- Run it in Supabase: SQL Editor -> New query -> paste -> Run. (On staging, scripts/db/migrate.mjs runs it.)
 
 -- 1. Courses a student is taking. ("courses" already exists and stores generated lessons.)
 create table if not exists public.academy_courses (
@@ -43,15 +43,23 @@ alter table public.deadlines enable row level security;
 
 drop policy if exists "academy_courses_owner" on public.academy_courses;
 create policy "academy_courses_owner" on public.academy_courses
-  for all
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
 
 drop policy if exists "deadlines_owner" on public.deadlines;
 create policy "deadlines_owner" on public.deadlines
-  for all
-  using (user_id = auth.uid())
+  for all to authenticated
+  using (user_id = (select auth.uid()))
   with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.academy_courses c where c.id = course_id and c.user_id = auth.uid())
+    user_id = (select auth.uid())
+    and exists (select 1 from public.academy_courses c where c.id = course_id and c.user_id = (select auth.uid()))
   );
+
+-- 5. Since 30 October 2026 Supabase no longer grants new tables to the API roles on its own, so the grants are explicit.
+--    Signed-in students reach these tables as `authenticated` (row-level security above still applies); visitors get
+--    nothing. On a project that created the tables before that date this only removes access visitors never needed.
+revoke all on public.academy_courses from anon;
+revoke all on public.deadlines from anon;
+grant select, insert, update, delete on public.academy_courses to authenticated;
+grant select, insert, update, delete on public.deadlines to authenticated;

@@ -4,34 +4,44 @@ import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import type { Lesson, Personalization, Segment } from '../lesson'
 import { getStyle } from '../learning-styles'
+import { estimateClaudeUsd, reserveUsage, settleUsage } from './budget'
 import { recordUsage, tokensFromSdk } from './usage'
 
 const MODEL_ID = process.env.LYCEO_MODEL || 'claude-sonnet-4-6'
 /** Grading can move to a different model once the benchmark shows it's as good (see bench/). */
 const GRADE_MODEL_ID = process.env.LYCEO_GRADE_MODEL || MODEL_ID
 
-/** Runs one Claude call and logs its tokens, cost and latency, whether it succeeds or fails. */
-async function tracked<T extends { usage: Parameters<typeof tokensFromSdk>[0] }>(
+/**
+ * Runs one Claude call: reserves its worst-case cost against the daily limits (where configured), makes the call,
+ * then logs and settles its real tokens, cost and latency, whether it succeeds or fails.
+ */
+export async function tracked<T extends { usage: Parameters<typeof tokensFromSdk>[0] }>(
   task: string,
   model: string,
   userId: string | null | undefined,
+  budget: { promptChars: number; maxOutputTokens: number; studySessionId?: number | null },
   run: () => Promise<T>,
 ): Promise<T> {
+  const reservation = await reserveUsage({
+    task,
+    provider: 'anthropic',
+    model,
+    userId,
+    estimateUsd: estimateClaudeUsd(model, budget.promptChars, budget.maxOutputTokens),
+    studySessionId: budget.studySessionId,
+  })
   const started = Date.now()
   try {
     const result = await run()
-    recordUsage({
-      task,
-      provider: 'anthropic',
-      model,
-      latencyMs: Date.now() - started,
-      ok: true,
-      tokens: tokensFromSdk(result.usage),
-      userId,
-    })
+    const tokens = tokensFromSdk(result.usage)
+    const latencyMs = Date.now() - started
+    const record = recordUsage({ task, provider: 'anthropic', model, latencyMs, ok: true, tokens, userId })
+    await settleUsage(reservation, { ok: true, costUsd: record.costUsd, tokens, latencyMs })
     return result
   } catch (err) {
-    recordUsage({ task, provider: 'anthropic', model, latencyMs: Date.now() - started, ok: false, userId })
+    const latencyMs = Date.now() - started
+    recordUsage({ task, provider: 'anthropic', model, latencyMs, ok: false, userId })
+    await settleUsage(reservation, { ok: false, costUsd: null, latencyMs })
     throw err
   }
 }
@@ -120,13 +130,8 @@ export async function writeLesson(opts: {
   userId?: string | null
 }): Promise<Omit<Lesson, 'meta'>> {
   const model = opts.model ?? MODEL_ID
-  const { output } = await tracked('lesson', model, opts.userId, () =>
-    generateText({
-      model: anthropic(model),
-      system: `${THEO}\n\n${LESSON_RULES}`,
-      output: Output.object({ schema: lessonSchema }),
-      maxOutputTokens: 8000,
-      prompt: `Write a lesson that teaches the most important ideas in this course material.
+  const system = `${THEO}\n\n${LESSON_RULES}`
+  const prompt = `Write a lesson that teaches the most important ideas in this course material.
 
 Course: ${opts.courseTitle || 'Not given'}
 
@@ -135,8 +140,21 @@ ${describeStudent(opts.student)}
 Material:
 <material>
 ${opts.material.slice(0, MAX_SOURCE_CHARS)}
-</material>`,
-    }),
+</material>`
+  const maxOutputTokens = 8000
+  const { output } = await tracked(
+    'lesson',
+    model,
+    opts.userId,
+    { promptChars: system.length + prompt.length, maxOutputTokens },
+    () =>
+      generateText({
+        model: anthropic(model),
+        system,
+        output: Output.object({ schema: lessonSchema }),
+        maxOutputTokens,
+        prompt,
+      }),
   )
   const lesson = clean(output)
   if (!lesson.segments.length) throw new Error('The model returned an empty lesson')
@@ -162,19 +180,27 @@ What the student answered: ${wrongAnswers.map((a) => `"${a}"`).join(', ') || 'no
     )
     .join('\n\n')
 
-  const { output } = await tracked('review', model, opts.userId, () =>
-    generateText({
-      model: anthropic(model),
-      system: `${THEO}\n\n${LESSON_RULES}`,
-      output: Output.object({ schema: lessonSchema }),
-      maxOutputTokens: 6000,
-      prompt: `Write a short review lesson (one segment per concept, at most 4) for the concepts below, which the student did not get on the first try in "${opts.courseTitle}".
+  const system = `${THEO}\n\n${LESSON_RULES}`
+  const prompt = `Write a short review lesson (one segment per concept, at most 4) for the concepts below, which the student did not get on the first try in "${opts.courseTitle}".
 Explain each one from a different angle than before${style ? ` (${style.fallback})` : ''}, address the misunderstanding their answers show, and write a new check question.
 
 ${describeStudent(opts.student)}
 
-${missed}`,
-    }),
+${missed}`
+  const maxOutputTokens = 6000
+  const { output } = await tracked(
+    'review',
+    model,
+    opts.userId,
+    { promptChars: system.length + prompt.length, maxOutputTokens },
+    () =>
+      generateText({
+        model: anthropic(model),
+        system,
+        output: Output.object({ schema: lessonSchema }),
+        maxOutputTokens,
+        prompt,
+      }),
   )
   const lesson = clean(output)
   if (!lesson.segments.length) throw new Error('The model returned an empty review')
@@ -209,27 +235,35 @@ export async function gradeAnswer(opts: {
     ? style.fallback
     : 'Use a different approach than the original explanation, such as a concrete example with numbers or an analogy.'
 
-  const { output } = await tracked('grade', model, opts.userId, () =>
-    generateText({
-      model: anthropic(model),
-      system: `${THEO}
+  const system = `${THEO}
 
 You are grading one check-in answer in a one-on-one lesson.
 - Be fair: accept answers that show the right idea even if they're loosely worded or have small slips. Numbers within rounding count.
 - Feedback reacts to what the student actually wrote, warmly and specifically. Light humor is welcome; never be mean. If the answer is a guess, "idk" or nonsense, call it out kindly.
 - If the answer is wrong, re-explain the idea from a different angle than before and connect it to what they wrote. ${angle}
 - Spoken text has no LaTeX or symbols. Board lines put math in $...$.
-- If the answer is correct, leave the re-explanation empty.`,
-      output: Output.object({ schema: gradeSchema }),
-      maxOutputTokens: 1500,
-      prompt: `Concept: ${segment.concept}
+- If the answer is correct, leave the re-explanation empty.`
+  const prompt = `Concept: ${segment.concept}
 How it was explained: ${segment.narration}
 Board: ${segment.board.join(' | ')}
 Question: ${segment.check.question}
 Ideal answer: ${segment.check.idealAnswer || 'Not provided; judge from the explanation.'}
 ${opts.missedBefore > 0 ? `The student has already missed this question ${opts.missedBefore} time(s), so try a noticeably different explanation.\n` : ''}
-Student's answer: <answer>${answer}</answer>`,
-    }),
+Student's answer: <answer>${answer}</answer>`
+  const maxOutputTokens = 1500
+  const { output } = await tracked(
+    'grade',
+    model,
+    opts.userId,
+    { promptChars: system.length + prompt.length, maxOutputTokens },
+    () =>
+      generateText({
+        model: anthropic(model),
+        system,
+        output: Output.object({ schema: gradeSchema }),
+        maxOutputTokens,
+        prompt,
+      }),
   )
   return {
     ...output,

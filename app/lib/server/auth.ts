@@ -13,7 +13,8 @@ export class HttpError extends Error {
 
 /** A Supabase client that acts as the signed-in user, so row-level security applies. */
 function clientFor(token: string) {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -35,6 +36,26 @@ export async function requireUser(req: Request): Promise<{ user: User; db: Supab
   const { data, error } = await db.auth.getUser(token)
   if (error || !data.user) throw new HttpError(401, 'Your session expired. Sign in again.')
   return { user: data.user, db }
+}
+
+/**
+ * True when the request's session comes from a sign-in in the last `seconds` (the JWT's amr timestamps). Call it
+ * after requireUser, which has already verified the token with Supabase Auth.
+ */
+export function signedInWithin(req: Request, seconds: number, now = Date.now()) {
+  const token = bearer(req)
+  const payload = token?.split('.')[1]
+  if (!payload) return false
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    const times: number[] = Array.isArray(claims.amr)
+      ? claims.amr.map((m: { timestamp?: unknown }) => Number(m?.timestamp))
+      : []
+    const latest = Math.max(...times.filter(Number.isFinite))
+    return Number.isFinite(latest) && latest >= now / 1000 - seconds
+  } catch {
+    return false
+  }
 }
 
 /** Like requireUser, but returns null when the request has no session (used by the public demo). */

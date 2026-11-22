@@ -1,4 +1,5 @@
-// Checks row-level security from the outside, with the public anon key. It never prints row contents.
+// Checks row-level security from the outside, with the project's public key (publishable or legacy anon). It never
+// prints row contents. For staging, npm run check:staging covers this and the newer tables too.
 //
 // 1. Anonymous check (safe on production; read-only): no table may return rows to a visitor who isn't signed in.
 //      SUPABASE_URL=… SUPABASE_ANON_KEY=… npm run check:rls
@@ -10,9 +11,11 @@
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.SUPABASE_URL
-const anonKey = process.env.SUPABASE_ANON_KEY
+const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY
 if (!url || !anonKey) {
-  console.error('Set SUPABASE_URL and SUPABASE_ANON_KEY (Supabase > Project Settings > API).')
+  console.error(
+    'Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or the legacy SUPABASE_ANON_KEY): Project Settings > API Keys.',
+  )
   process.exit(2)
 }
 const TABLES = ['users', 'courses', 'session_events', 'academy_courses', 'deadlines']

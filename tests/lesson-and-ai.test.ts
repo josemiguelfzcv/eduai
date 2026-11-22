@@ -10,6 +10,9 @@ import { cacheKey, signText, verifyText } from '../app/lib/server/tts'
 import { onUsage, type UsageRecord } from '../app/lib/server/usage'
 
 process.env.LYCEO_USAGE_LOG = 'off'
+// Unit tests never reach a database, whatever the environment says (CI sets a fake one for its bundle scan). Daily
+// limits are tested against a real Postgres in tests/db.
+delete process.env.LYCEO_SERVER_DATABASE_URL
 
 test('legacy StudyAI lessons and v2 lessons both open', () => {
   const legacy = normalizeLesson({

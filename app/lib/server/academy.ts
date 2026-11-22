@@ -18,7 +18,7 @@ import { HttpError } from './auth'
 import { computeLearner, summarizeLearner, type EventRow, type ProfileRow } from './learner'
 
 export const SETUP_MESSAGE =
-  'My Academy needs a one-time database update. Run supabase/0001_my_academy.sql in the Supabase SQL editor.'
+  'My Academy needs a one-time database update. Run supabase/migrations/0001_my_academy.sql in the Supabase SQL editor.'
 
 type DbError = { code?: string; message?: string } | null
 

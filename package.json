@@ -11,7 +11,13 @@
     "test": "node --conditions=react-server --import tsx --test \"tests/**/*.test.ts\"",
     "check:bundle": "node scripts/check-client-bundle.mjs",
     "check:rls": "node scripts/check-rls.mjs",
-    "bench": "node --conditions=react-server --import tsx bench/run.ts"
+    "bench": "node --conditions=react-server --import tsx bench/run.ts",
+    "test:db": "node --conditions=react-server --import tsx --test --test-concurrency=1 \"tests/db/**/*.test.ts\"",
+    "bench:grading": "node --conditions=react-server --import tsx bench/grading.ts",
+    "db:migrate:staging": "node scripts/db/migrate.mjs --i-am-on-staging",
+    "db:server-role": "node scripts/db/server-role.mjs",
+    "check:staging": "node --conditions=react-server --import tsx scripts/check-staging.ts",
+    "cleanup:deletions": "node --conditions=react-server --import tsx scripts/cleanup-deletions.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.66",
@@ -26,8 +32,10 @@
     "@uploadthing/react": "^7.3.3",
     "ai": "^6.0.145",
     "katex": "^0.16.45",
-    "next": "16.1.6",
+    "mathjs": "^15.2.0",
+    "next": "^16.4.6",
     "openai": "^6.33.0",
+    "postgres": "^3.4.9",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "server-only": "^0.0.1",
@@ -41,7 +49,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

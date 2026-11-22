@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { assertUploadUrl, errorResponse, HttpError, requireUser } from '../../lib/server/auth'
 import { assertOwnCourse } from '../../lib/server/academy'
+import { estimateTranscriptionUsd, reserveUsage, settleUsage } from '../../lib/server/budget'
 import { createCourse } from '../../lib/server/courses'
 import { recordUsage } from '../../lib/server/usage'
 
@@ -23,8 +24,12 @@ export async function POST(req: NextRequest) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const name = typeof fileName === 'string' && fileName ? fileName : 'recording.mp3'
-    const started = Date.now()
     const usage = { task: 'transcribe', provider: 'openai', model: STT_MODEL, userId: user.id } as const
+    const reservation = await reserveUsage({
+      ...usage,
+      estimateUsd: estimateTranscriptionUsd(STT_MODEL, blob.size),
+    })
+    const started = Date.now()
     let transcription
     try {
       // verbose_json adds the audio duration, which is what transcription is billed by.
@@ -35,9 +40,12 @@ export async function POST(req: NextRequest) {
       })
     } catch (err) {
       recordUsage({ ...usage, latencyMs: Date.now() - started, ok: false })
+      await settleUsage(reservation, { ok: false, costUsd: null })
       throw err
     }
-    recordUsage({ ...usage, seconds: transcription.duration, latencyMs: Date.now() - started, ok: true })
+    const latencyMs = Date.now() - started
+    const record = recordUsage({ ...usage, seconds: transcription.duration, latencyMs, ok: true })
+    await settleUsage(reservation, { ok: true, costUsd: record.costUsd, seconds: transcription.duration, latencyMs })
 
     const text = transcription.text
     if (text.trim().length < 200) throw new HttpError(422, 'The recording is too short to build a lesson from.')

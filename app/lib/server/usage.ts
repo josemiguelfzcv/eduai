@@ -3,21 +3,26 @@ import { createHash } from 'node:crypto'
 
 /**
  * Usage and cost of every paid AI call, written as one JSON line per call to the server logs
- * (search the Vercel logs for "ai_usage"). Nothing is stored in the database yet.
+ * (search the Vercel logs for "ai_usage"). Where the trusted server connection is configured (staging), the
+ * authoritative record and the daily limits are in Postgres too: see budget.ts.
  *
- * List prices in USD, checked 2026-11-22. Update them here when a provider changes its prices.
+ * List prices in USD, checked 2026-11-22. Update them here when a provider changes its prices, and change
+ * PRICE_VERSION so stored records say which table priced them.
  */
-const CLAUDE_PER_MTOK: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
-  'claude-sonnet-4-6': { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
-  'claude-sonnet-5-5': { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 },
-  // Haiku 5.5 is priced by prompt length; these are the rates for prompts up to 100,000 tokens.
-  'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01 },
-  'claude-haiku-4-5': { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
-}
+export const PRICE_VERSION = '2026-11-22'
+
+export const CLAUDE_PER_MTOK: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> =
+  {
+    'claude-sonnet-4-6': { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 },
+    'claude-sonnet-5-5': { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 },
+    // Haiku 5.5 is priced by prompt length; these are the rates for prompts up to 100,000 tokens.
+    'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01 },
+    'claude-haiku-4-5': { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+  }
 const HAIKU_55_LONG = { input: 0.5, output: 2.5, cacheWrite: 0.625, cacheRead: 0.05 }
 
 /** ElevenLabs, per 1,000 characters. */
-const VOICE_PER_1K_CHARS: Record<string, number> = {
+export const VOICE_PER_1K_CHARS: Record<string, number> = {
   eleven_multilingual_v2: 0.08,
   eleven_v3: 0.08,
   eleven_flash_v2_5: 0.04,
@@ -25,7 +30,7 @@ const VOICE_PER_1K_CHARS: Record<string, number> = {
 }
 
 /** OpenAI transcription, per minute of audio. */
-const TRANSCRIPTION_PER_MIN: Record<string, number> = {
+export const TRANSCRIPTION_PER_MIN: Record<string, number> = {
   'whisper-1': 0.006,
   'gpt-transcribe': 0.0045,
 }

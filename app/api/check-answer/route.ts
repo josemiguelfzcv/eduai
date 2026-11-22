@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ...grade,
-      reexplanationAudio: grade.reexplanation ? speechUrl(grade.reexplanation) : null,
+      reexplanationAudio: grade.reexplanation ? speechUrl(grade.reexplanation, auth?.user.id ?? null) : null,
     })
   } catch (err) {
     return errorResponse(err, 'Could not check your answer. Try again.')

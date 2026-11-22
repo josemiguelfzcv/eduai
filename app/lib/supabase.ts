@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// New Supabase projects (staging) only have a publishable key; production still has the legacy anon key, which
+// Supabase removes in late 2026. Either works here: both are public and both are limited by row-level security.
+const supabaseKey = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 

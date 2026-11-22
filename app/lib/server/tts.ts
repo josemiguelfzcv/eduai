@@ -55,17 +55,24 @@ function signingKey() {
   return createHash('sha256').update(`lyceo-tts:${secret}`).digest()
 }
 
-export function signText(text: string) {
-  return createHmac('sha256', signingKey()).update(text).digest('hex')
+/**
+ * Signs a piece of text (and, for a signed-in student, their id) so /api/speak will voice it. The id lets the voice
+ * cost count against that student's daily limit even though the audio element requesting it sends no session.
+ */
+export function signText(text: string, userId?: string | null) {
+  return createHmac('sha256', signingKey())
+    .update(userId ? `u:${userId}\n${text}` : text)
+    .digest('hex')
 }
 
-export function verifyText(text: string, sig: string | null) {
+export function verifyText(text: string, sig: string | null, userId?: string | null) {
   if (!sig || sig.length !== 64) return false
-  const expected = Buffer.from(signText(text), 'hex')
+  const expected = Buffer.from(signText(text, userId), 'hex')
   const given = Buffer.from(sig, 'hex')
   return given.length === expected.length && timingSafeEqual(expected, given)
 }
 
-export function speechUrl(text: string) {
-  return `/api/speak?text=${encodeURIComponent(text)}&sig=${signText(text)}`
+export function speechUrl(text: string, userId?: string | null) {
+  const who = userId ? `&u=${encodeURIComponent(userId)}` : ''
+  return `/api/speak?text=${encodeURIComponent(text)}${who}&sig=${signText(text, userId)}`
 }

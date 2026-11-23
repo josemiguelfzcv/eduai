@@ -785,6 +785,35 @@ describe('staging schema security', { skip: skipReason }, () => {
       assert.ok(!after.some((r) => r.user_id === doomed))
     })
   })
+
+  test("an answer is saved before the app has written the student's profile row", async () => {
+    // A student who reaches a study session without opening the dashboard has no public.users row (see 0005).
+    const [{ id: fresh }] = await db.admin`insert into auth.users (email) values ('fresh@test.lyceo') returning id`
+    const F = { role: 'authenticated' as const, sub: fresh as string }
+    const [course] = await as(db, F, (tx) => tx`insert into public.academy_courses (name) values ('Chem') returning id`)
+    const [skill] = await as(
+      db,
+      F,
+      (tx) => tx`insert into public.skills (academy_course_id, name) values (${course.id}, 'Moles') returning id`,
+    )
+    const [{ id: session }] =
+      await db.server`select private.session_start(${fresh}, ${course.id}, 'quick_check', ${[skill.id]}, 'v1') as id`
+    await db.server`select private.session_add_items(${fresh}, ${session}, ${json([
+      {
+        id: 'q1',
+        skill_id: skill.id,
+        difficulty: 1,
+        facet: 'conceptual',
+        public: { prompt: 'x' },
+        key: { accepted: ['y'] },
+      },
+    ])})`
+    const [{ id }] =
+      await db.server`select private.record_attempt(${fresh}, ${session}, 'q1', ${json({ verdict: 'correct', answer: 'y' })}) as id`
+    assert.ok(Number(id) > 0, 'the answer was recorded')
+    const [profile] = await db.admin`select email from public.users where id = ${fresh}`
+    assert.equal(profile?.email, 'fresh@test.lyceo', 'the profile row was created with the email')
+  })
 })
 
 async function spent(user: string) {

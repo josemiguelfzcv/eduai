@@ -62,7 +62,9 @@ async function dataApi(a: { c: SupabaseClient; id: string }, b: { c: SupabaseCli
     'skill_sources',
     'study_sessions',
   ]) {
-    const { count, error } = await visitor.from(table).select('*', { count: 'exact', head: true })
+    // GET, not HEAD: a HEAD response has no body, so the client can't report the error code, and it turns an empty 404
+    // into "no error".
+    const { count, error } = await visitor.from(table).select('*', { count: 'exact' }).limit(1)
     report(`visitor reads ${table}`, !!error || count === 0, error ? `blocked (${error.code})` : `${count} rows`)
   }
   for (const [who, c] of [
@@ -70,8 +72,8 @@ async function dataApi(a: { c: SupabaseClient; id: string }, b: { c: SupabaseCli
     ['student', a.c],
   ] as const) {
     for (const table of ['ai_usage', 'item_keys', 'usage_days', 'usage_limits', 'account_deletions']) {
-      const inPublic = await c.from(table).select('*', { head: true })
-      const inPrivate = await c.schema('private').from(table).select('*', { head: true })
+      const inPublic = await c.from(table).select('*').limit(1)
+      const inPrivate = await c.schema('private').from(table).select('*').limit(1)
       report(
         `${who} can't reach ${table}`,
         !!inPublic.error && !!inPrivate.error,

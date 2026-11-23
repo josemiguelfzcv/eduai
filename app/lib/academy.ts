@@ -148,6 +148,8 @@ export type CourseDetail = {
   learningLoop?: boolean
   ideas?: IdeaSummary[]
   materials?: MaterialSummary[]
+  /** Every usable material in the course's order, lectures with their lesson's progress (learning environment). */
+  lectures?: import('./views').LectureSummary[]
   course: CourseSummary
   plan: StudyAction[]
   lessons: LessonProgress[]

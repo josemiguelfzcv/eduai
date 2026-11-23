@@ -10,6 +10,7 @@ import {
   toCourse,
 } from '../../../../lib/server/academy'
 import { learningLoopEnabled, loadLearning } from '../../../../lib/server/learning-data'
+import { courseMaterials } from '../../../../lib/server/lessons'
 import { deleteMaterialFiles } from '../../../../lib/server/materials'
 import { forgetMaterial } from '../../../../lib/server/records'
 import { validTimeZone } from '../../../../lib/mastery'
@@ -24,11 +25,16 @@ export async function GET(req: NextRequest, { params }: Context) {
     if (!Number.isInteger(id)) throw new HttpError(404, 'That course does not exist.')
     const today = todayFrom(req)
     const tz = validTimeZone(new URL(req.url).searchParams.get('tz'))
-    const [data, learning] = await Promise.all([
+    const loop = learningLoopEnabled(user)
+    const [data, learning, lectures] = await Promise.all([
       loadAcademyData(db, user.id),
-      learningLoopEnabled(user) ? loadLearning(db, { tz, today }) : null,
+      loop ? loadLearning(db, { tz, today }) : null,
+      loop ? courseMaterials(db, id) : undefined,
     ])
-    return NextResponse.json(buildCourseDetail(data, id, today, learning ? { learning, now: new Date() } : undefined))
+    return NextResponse.json({
+      ...buildCourseDetail(data, id, today, learning ? { learning, now: new Date() } : undefined),
+      lectures,
+    })
   } catch (err) {
     return errorResponse(err, 'Could not load the course.')
   }

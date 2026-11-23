@@ -271,3 +271,87 @@ Student's answer: <answer>${answer}</answer>`
     reexplanationBoard: output.correct ? [] : output.reexplanationBoard.filter(Boolean).slice(0, 4),
   }
 }
+
+/**
+ * A model call whose text streams to the browser as it's written (a lesson section, an Ask Lyceo answer), with the
+ * same guard as tracked(): reserved against the daily limits before it starts, settled with its real cost after.
+ * `onDone` runs with the whole text before the stream closes, so what was shown is saved; a call that fails or is
+ * cut off saves nothing.
+ */
+export async function trackedTextStream(opts: {
+  task: string
+  model: string
+  userId: string
+  promptChars: number
+  maxOutputTokens: number
+  start: (
+    signal: AbortSignal,
+    onError: (error: unknown) => void,
+  ) => {
+    textStream: AsyncIterable<string>
+    usage: PromiseLike<Parameters<typeof tokensFromSdk>[0]>
+  }
+  onDone: (text: string) => Promise<void>
+}): Promise<Response> {
+  const reservation = await reserveUsage({
+    task: opts.task,
+    provider: 'anthropic',
+    model: opts.model,
+    userId: opts.userId,
+    estimateUsd: estimateClaudeUsd(opts.model, opts.promptChars, opts.maxOutputTokens),
+  })
+  const started = Date.now()
+  const abort = new AbortController()
+  let failure: unknown = null
+  const result = opts.start(abort.signal, (error) => (failure = error))
+  const encoder = new TextEncoder()
+  const fail = async () => {
+    const latencyMs = Date.now() - started
+    recordUsage({
+      task: opts.task,
+      provider: 'anthropic',
+      model: opts.model,
+      latencyMs,
+      ok: false,
+      userId: opts.userId,
+    })
+    await settleUsage(reservation, { ok: false, costUsd: null, latencyMs })
+  }
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let text = ''
+      try {
+        for await (const chunk of result.textStream) {
+          text += chunk
+          controller.enqueue(encoder.encode(chunk))
+        }
+        if (failure || !text.trim()) throw failure ?? new Error('The model returned no text')
+        const tokens = tokensFromSdk(await result.usage)
+        const latencyMs = Date.now() - started
+        const record = recordUsage({
+          task: opts.task,
+          provider: 'anthropic',
+          model: opts.model,
+          latencyMs,
+          ok: true,
+          tokens,
+          userId: opts.userId,
+        })
+        await settleUsage(reservation, { ok: true, costUsd: record.costUsd, tokens, latencyMs })
+        await opts.onDone(text)
+        controller.close()
+      } catch (err) {
+        await fail()
+        console.error(`${opts.task} stream failed`, err)
+        controller.error(err)
+      }
+    },
+    cancel() {
+      // The student closed the page: stop writing.
+      abort.abort()
+    },
+  })
+  return new Response(body, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' },
+  })
+}

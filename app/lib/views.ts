@@ -66,3 +66,61 @@ export type SessionView = {
   materialTitles: Record<number, string>
   summary: SessionSummary | null
 }
+
+// ---------- the learning environment ----------
+
+export type MaterialRole = 'lecture' | 'assignment' | 'reading' | 'other'
+
+/** A material in the course sidebar. Lectures carry their lesson's progress. */
+export type LectureSummary = {
+  id: number
+  title: string
+  role: MaterialRole
+  sequence: number | null
+  lectureDate: string | null
+  status: string
+  /** Sections in the lesson's outline (0 before the lesson is planned). */
+  sections: number
+  completed: number
+  openedAt: string | null
+}
+
+export type LessonMessage = {
+  id: number
+  role: 'student' | 'lyceo'
+  content: string
+  context: { sectionId?: string; quote?: string } | null
+  createdAt: string
+}
+
+export type LectureView = {
+  lecture: {
+    id: number
+    title: string
+    role: MaterialRole
+    status: string
+    policy: 'study' | 'graded'
+    failure: string | null
+    pageCount: number
+    courseId: number | null
+    courseName: string | null
+    lectureDate: string | null
+  }
+  /** Its place among the course's lectures (1-based), when it is one. */
+  number: number | null
+  total: number
+  prevId: number | null
+  nextId: number | null
+  lesson: {
+    id: number
+    outline: import('./written-lesson').OutlineSection[]
+    /** The text of each section written so far. */
+    sections: Record<string, string>
+    currentSection: string | null
+    completed: string[]
+    position: import('./written-lesson').ReadingAnchor | null
+  } | null
+  messages: LessonMessage[]
+  /** The lecture's skills with their state: what the lesson and Ask Lyceo remember about the student. */
+  skills: { id: number; name: string; state: import('./mastery').SkillStateName; label: string; reason: string }[]
+}

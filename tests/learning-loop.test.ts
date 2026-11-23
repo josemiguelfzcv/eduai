@@ -232,6 +232,23 @@ describe('a study session', () => {
     assert.equal(p.current, 'q2')
   })
 
+  test('a Guided Review reads each explanation right before its first question', () => {
+    const items = [
+      item('e-q1', { type: 'explanation' }),
+      item('q1'),
+      item('e-q2', { type: 'explanation', skill_id: 2 }),
+      item('q2', { skill_id: 2 }),
+      item('q3'),
+    ]
+    const p = sessionProgress(items, [answer('q1', { mode: 'assisted', explainedBefore: true })])
+    assert.deepEqual(
+      p.items.map((v) => v.item.id),
+      ['e-q1', 'q1', 'e-q2', 'q2', 'q3'],
+    )
+    assert.equal(p.current, 'q2')
+    assert.equal(p.questions, 3)
+  })
+
   test('an unclear first answer keeps the question open', () => {
     const p = sessionProgress([item('q1')], [answer('q1', { verdict: 'unclear', final: false, solution: null })])
     assert.equal(p.current, 'q1')

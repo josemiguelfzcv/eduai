@@ -239,7 +239,9 @@ export default function QuickCheck() {
             'Quick Check'
           )}
         </p>
-        <h1 className="mt-1 text-[clamp(1.8rem,3.4vw,2.4rem)]">{summary ? 'How it went' : 'Quick Check'}</h1>
+        <h1 className="mt-1 text-[clamp(1.8rem,3.4vw,2.4rem)]">
+          {summary ? 'How it went' : view.session.mode === 'guided_review' ? 'Guided Review' : 'Quick Check'}
+        </h1>
       </div>
       {!summary && view.session.status === 'active' && (
         <div className="flex items-center gap-4">
@@ -349,10 +351,9 @@ export default function QuickCheck() {
       </div>
     )
   } else if (current) {
-    const explanation =
-      current.item.follows !== undefined
-        ? steps.find((s) => s.item.type === 'explanation' && s.item.follows === current.item.follows)
-        : undefined
+    // The explanation the student reads first: the item right before this question, if it is one.
+    const before = steps[steps.findIndex((s) => s.item.id === current.item.id) - 1]
+    const explanation = before?.item.type === 'explanation' ? before : undefined
     const number = questions.findIndex((q) => q.item.id === current.item.id) + 1
     body = (
       <>

@@ -11,7 +11,7 @@ import {
 import { addItems, itemForGrading, type NewItem } from '../../../../lib/server/records'
 import { clientClock, sessionId, sessionView } from '../../../../lib/server/sessions'
 import { toItem } from '../../../../lib/questions'
-import { findQuote } from '../../../../lib/skill-map'
+import { citation } from '../../../../lib/skill-map'
 import { MAX_ROUNDS, roundsUsed, type PlannedQuestion } from '../../../../lib/study'
 
 export const maxDuration = 90
@@ -88,13 +88,7 @@ export async function POST(req: NextRequest, context: Context) {
     })
 
     // The citation is kept only if its words are really on that page of the student's material.
-    const pages = ctx.excerpts.map((e) => ({ n: e.page, text: e.text, materialId: e.materialId }))
-    const quoted = explained.quote ? findQuote(explained.quote, pages) : []
-    const page = pages.find((p) => p.n === (quoted.includes(explained.page ?? -1) ? explained.page : quoted[0]))
-    const cited = page ?? pages.find((p) => p.n === explained.page)
-    const sources_ = cited
-      ? [{ materialId: cited.materialId, pages: [cited.n], quote: page ? explained.quote.slice(0, 300) : undefined }]
-      : undefined
+    const sources_ = citation(ctx.excerpts, explained.page, explained.quote)
 
     const slot: PlannedQuestion = {
       skillId: item.skill_id,

@@ -29,14 +29,14 @@ export default function CoursePage() {
   const [deleting, setDeleting] = useState(false)
 
   const fetchDetail = useCallback(() => getJSON<CourseDetail>(`/api/academy/courses/${id}?${clockQuery()}`), [id])
-  const [starting, setStarting] = useState(false)
-  const quickCheck = async () => {
-    setStarting(true)
+  const [starting, setStarting] = useState<'quick_check' | 'guided_review' | null>(null)
+  const startSession = async (mode: 'quick_check' | 'guided_review') => {
+    setStarting(mode)
     try {
-      router.push(`/sessions/${await startQuickCheck({ courseId: id })}`)
+      router.push(`/sessions/${await startQuickCheck({ courseId: id, mode })}`)
     } catch (e) {
-      setProblem({ status: 500, message: e instanceof Error ? e.message : 'Could not start the Quick Check.' })
-      setStarting(false)
+      setProblem({ status: 500, message: e instanceof Error ? e.message : 'Could not start the session.' })
+      setStarting(null)
     }
   }
   const showDetail = useCallback((data: CourseDetail) => {
@@ -158,17 +158,46 @@ export default function CoursePage() {
                   Ideas
                 </h2>
                 {toPractice > 0 && (
-                  <button type="button" className="btn btn-quiet" onClick={quickCheck} disabled={starting}>
-                    {starting ? (
-                      <>
-                        <span className="spinner" /> Writing questions
-                      </>
-                    ) : (
-                      'Quick Check'
-                    )}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      onClick={() => startSession('guided_review')}
+                      disabled={starting !== null}
+                      title="About 15 minutes: an explanation from your material, then practice"
+                    >
+                      {starting === 'guided_review' ? (
+                        <>
+                          <span className="spinner" /> Writing the review
+                        </>
+                      ) : (
+                        'Guided Review'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      onClick={() => startSession('quick_check')}
+                      disabled={starting !== null}
+                      title="4 to 6 questions on your own"
+                    >
+                      {starting === 'quick_check' ? (
+                        <>
+                          <span className="spinner" /> Writing questions
+                        </>
+                      ) : (
+                        'Quick Check'
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
+              {toPractice > 0 && (
+                <p className="mt-2 text-[0.9rem] text-ink-soft">
+                  A Quick Check is 4 to 6 questions on your own. A Guided Review takes about 15 minutes: an explanation
+                  from your material first, then practice.
+                </p>
+              )}
               {ideas.length > 0 ? (
                 <ul className="mt-4 space-y-2">
                   {ideas.map((idea) => (

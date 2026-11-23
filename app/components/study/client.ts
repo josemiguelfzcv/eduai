@@ -4,8 +4,13 @@ import { useEffect, useState } from 'react'
 import { clockBody } from '../../lib/clock'
 import { getJSON, postJSON } from '../../lib/supabase'
 
-/** Starts a Quick Check and returns its id. Writing the questions takes 15 to 40 seconds. */
-export async function startQuickCheck(opts: { courseId: number; skillIds?: number[]; materialId?: number }) {
+/** Starts a Quick Check (or a Guided Review) and returns its id. Writing it takes 15 to 40 seconds. */
+export async function startQuickCheck(opts: {
+  courseId: number
+  skillIds?: number[]
+  materialId?: number
+  mode?: 'quick_check' | 'guided_review'
+}) {
   const { sessionId } = await postJSON<{ sessionId: number }>('/api/sessions', { ...opts, ...clockBody() })
   return sessionId
 }

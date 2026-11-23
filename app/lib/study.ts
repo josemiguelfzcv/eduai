@@ -238,7 +238,9 @@ export function buildSummary(input: {
         ? 'with a hint'
         : helped.teachingRound >= 2
           ? 'solved after a second explanation'
-          : 'solved on the second try after the explanation'
+          : helped.teachingRound === 1
+            ? 'solved on the second try after the explanation'
+            : 'solved after the explanation'
     withHelp.push({ skill: name(s), how })
   }
 

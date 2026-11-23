@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, context: Context) {
     await recordAttempt(user.id, id, itemId, {
       answer,
       verdict: graded.verdict,
-      source: round ? 'practice' : 'quick_check',
+      source: round || session.mode === 'guided_review' ? 'practice' : 'quick_check',
       hintsUsed: k.hintsRevealed,
       explainedBefore: explained,
       teachingRound: round,

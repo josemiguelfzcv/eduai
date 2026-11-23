@@ -30,8 +30,7 @@ export const LEARNING_STYLES: LearningStyle[] = [
     id: 'codigo',
     label: 'Through code',
     description: 'Explain ideas the way a programmer would think about them.',
-    teach:
-      'Connect ideas to programming when it helps: describe the logic like a small function or loop, and put tiny pseudo-code on the board.',
+    teach: 'Connect ideas to programming when it helps: describe the logic like a small function or loop, and put tiny pseudo-code on the board.',
     fallback: 'Drop the code framing and use a concrete everyday example instead.',
   },
   {
@@ -80,4 +79,5 @@ const LEGACY_MAJORS: Record<string, string> = {
   Otra: 'Other',
 }
 
-export const normalizeMajor = (value: string | null | undefined) => (value ? (LEGACY_MAJORS[value] ?? value) : null)
+export const normalizeMajor = (value: string | null | undefined) =>
+  value ? (LEGACY_MAJORS[value] ?? value) : null

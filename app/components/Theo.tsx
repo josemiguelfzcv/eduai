@@ -67,12 +67,7 @@ const LEAVES = Array.from({ length: 9 }, (_, i) => 118 + i * 15)
 
 export function TheoMedallion({ size = 160 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      className="block drop-shadow-[0_14px_18px_rgba(28,39,51,0.22)]"
-    >
+    <svg width={size} height={size} viewBox="0 0 100 100" className="block drop-shadow-[0_14px_18px_rgba(28,39,51,0.22)]">
       <circle cx="50" cy="50" r="31" fill="#1f3b2d" />
       <circle cx="50" cy="50" r="31" fill="none" stroke="#c2a15a" strokeWidth="2.5" />
       {[1, -1].map((side) =>
@@ -82,15 +77,7 @@ export function TheoMedallion({ size = 160 }: { size?: number }) {
           const y = 50 + Math.sin(a) * 41
           const rot = (side === 1 ? deg : 180 - deg) + 90 + side * 28
           return (
-            <ellipse
-              key={`${side}${deg}`}
-              cx={x}
-              cy={y}
-              rx="2.6"
-              ry="6.4"
-              fill="#c2a15a"
-              transform={`rotate(${rot} ${x} ${y})`}
-            />
+            <ellipse key={`${side}${deg}`} cx={x} cy={y} rx="2.6" ry="6.4" fill="#c2a15a" transform={`rotate(${rot} ${x} ${y})`} />
           )
         }),
       )}

@@ -182,3 +182,27 @@ export function splitPages(text: string, pages: { n: number; start: number }[]):
     text: text.slice(p.start, i + 1 < pages.length ? pages[i + 1].start : undefined).trim(),
   }))
 }
+
+/**
+ * Where an explanation comes from, for showing under it: the page it cites, with its quote only if the quote's words
+ * are really on one of the excerpts' pages. Undefined when it cites nothing Lyceo showed it.
+ */
+export function citation(
+  excerpts: { materialId: number; page: number; text: string }[],
+  page: number | null,
+  quote: string,
+) {
+  const pages = excerpts.map((e) => ({ n: e.page, text: e.text, materialId: e.materialId }))
+  const found = quote ? findQuote(quote, pages) : []
+  const onPage = page !== null && found.includes(page) ? page : found[0]
+  const verified = onPage === undefined ? undefined : pages.find((p) => p.n === onPage)
+  const cited = verified ?? pages.find((p) => p.n === page)
+  if (!cited) return undefined
+  return [
+    {
+      materialId: cited.materialId,
+      pages: [cited.n],
+      quote: verified ? quote.replace(/\s+/g, ' ').trim().slice(0, 300) : undefined,
+    },
+  ]
+}

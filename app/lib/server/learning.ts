@@ -285,3 +285,49 @@ The explanation they just read: ${opts.explanation}`
   )
   return output
 }
+
+// ---------- Guided Review ----------
+
+const guidedSchema = z.object({
+  explanations: z.array(
+    z.object({
+      skillId: z.number(),
+      explanation: z
+        .string()
+        .describe('4 to 6 sentences: the idea in plain words, how to use it, and one common mistake to avoid'),
+      page: z.number().nullable().describe('The page of the material it draws on'),
+      quote: z.string().describe('6 to 25 consecutive words copied exactly from that page, or empty'),
+    }),
+  ),
+})
+
+/** One explanation per skill, to read before practicing it. One call for all of them. */
+export async function writeGuidedExplanations(opts: {
+  skills: SkillContext[]
+  userId: string
+  studySessionId: number
+}) {
+  const system = `${TUTOR}
+
+A student is doing a Guided Review: for each skill they first read a short explanation from their own material, then practice it.
+- One explanation per skill, in the order given. Teach the idea; don't quiz.
+- Use the material's terms and notation. Cite the page you draw on and copy a short quote from it exactly.
+- If a skill isn't in the excerpts, say so plainly ("Your slides don't cover this directly, so...").`
+  const prompt = opts.skills.map(skillBlock).join('\n\n')
+  const maxOutputTokens = 500 * opts.skills.length + 300
+  const { output } = await tracked(
+    'guided-explain',
+    MODEL,
+    opts.userId,
+    { promptChars: system.length + prompt.length, maxOutputTokens, studySessionId: opts.studySessionId },
+    () =>
+      generateText({
+        model: anthropic(MODEL),
+        system,
+        prompt,
+        maxOutputTokens,
+        output: Output.object({ schema: guidedSchema }),
+      }),
+  )
+  return output.explanations
+}

@@ -304,7 +304,15 @@ export default function QuickCheck() {
             <MathText text={final.solution} className="mt-2 text-[0.98rem]" />
           </details>
         )}
-        <button type="button" className="btn btn-primary mt-6" onClick={() => setResult(null)}>
+        <button
+          type="button"
+          className="btn btn-primary mt-6"
+          disabled={busy !== null}
+          onClick={() => {
+            setResult(null)
+            if (!teachingNext && !view.current) finish(false)
+          }}
+        >
           {teachingNext ? 'See the explanation' : view.current ? 'Next question' : 'See how it went'}
         </button>
       </div>

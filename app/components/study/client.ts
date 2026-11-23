@@ -10,7 +10,7 @@ export async function startQuickCheck(opts: { courseId: number; skillIds?: numbe
   return sessionId
 }
 
-type Features = { learningLoop: boolean }
+type Features = { learningLoop: boolean; accountDeletion?: boolean }
 let features: Promise<Features> | null = null
 
 /** Which parts of Lyceo this deployment runs. Null until known. */

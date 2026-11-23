@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { AppShell, LoadingNote, useRequiredUser } from '../components/AppShell'
+import { DeleteAccount } from '../components/DeleteAccount'
+import { useFeatures } from '../components/study/client'
 import { LEARNING_STYLES, MAJORS, normalizeMajor } from '../lib/learning-styles'
 import { supabase } from '../lib/supabase'
 
 export default function Profile() {
   const user = useRequiredUser()
+  const features = useFeatures()
   const [loaded, setLoaded] = useState(false)
   const [major, setMajor] = useState('')
   const [style, setStyle] = useState('')
@@ -103,9 +106,16 @@ export default function Profile() {
               {status === 'saving' ? 'Saving' : 'Save'}
             </button>
             {status === 'saved' && <p className="text-moss">Saved. Your next lesson will use this.</p>}
-            {status === 'error' && <p className="text-terracotta">Couldn&apos;t save. Check your connection and try again.</p>}
+            {status === 'error' && (
+              <p className="text-terracotta">Couldn&apos;t save. Check your connection and try again.</p>
+            )}
           </div>
         </form>
+      )}
+      {features?.accountDeletion && (
+        <div className="mt-16 max-w-3xl">
+          <DeleteAccount startOpen={typeof window !== 'undefined' && window.location.search.includes('delete=1')} />
+        </div>
       )}
     </AppShell>
   )

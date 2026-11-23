@@ -8,6 +8,7 @@ import type { OurFileRouter } from '../api/uploadthing/route'
 import { AppShell, useRequiredUser } from '../components/AppShell'
 import type { AcademyCourse } from '../lib/academy'
 import { getJSON, postJSON, supabase } from '../lib/supabase'
+import { useFeatures } from '../components/study/client'
 
 const { useUploadThing } = generateReactHelpers<OurFileRouter>()
 
@@ -19,6 +20,11 @@ const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().
 export default function Upload() {
   useRequiredUser()
   const router = useRouter()
+  const features = useFeatures()
+  // Where the learning loop is on, uploads go to the private bucket and become a skill map.
+  useEffect(() => {
+    if (features?.learningLoop) router.replace(`/materials/new${window.location.search}`)
+  }, [features, router])
   const inputRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')
   const [file, setFile] = useState<File | null>(null)

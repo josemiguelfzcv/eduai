@@ -166,11 +166,9 @@ export async function loadLearning(
   const sessions = must(sessionsRes as DbResult<SessionRow[]>)
   const events = must(eventsRes as DbResult<EventRow[]>)
 
-  const answers: SessionAnswer[] = []
-  for (const e of events) {
-    const target = targetOf(skills, e.skill_id)
-    if (target !== null) answers.push(toAnswer(e, target, opts.tz))
-  }
+  // Every answer stays in its session; for mastery it counts toward the skill it now belongs to (a merged skill's
+  // answers count for the skill it was merged into; a hidden skill's, for none, since no active skill has its id).
+  const answers: SessionAnswer[] = events.map((e) => toAnswer(e, targetOf(skills, e.skill_id) ?? e.skill_id, opts.tz))
   const active = skillRows.filter((s) => s.status === 'active')
   const statesOn = (day: string) =>
     new Map<number, SkillState>(

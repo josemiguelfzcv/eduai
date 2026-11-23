@@ -282,7 +282,10 @@ export default function AddMaterial() {
           </div>
         )}
         <p className="text-[0.85rem] text-ink-soft">
-          Your file is stored privately. Only you can open it, and deleting it removes it for good.
+          Your file is stored privately. Only you can open it, and deleting it removes it for good.{' '}
+          <Link href="/privacy" className="underline underline-offset-4">
+            Your data in Lyceo
+          </Link>
         </p>
       </div>
     </AppShell>

@@ -213,15 +213,27 @@ async function serverRole(
           difficulty: 1,
           facet: 'procedural',
           public: { prompt: 'probe' },
-          key: { accepted: ['0.4242'], solution: 'probe-solution' },
+          key: { accepted: ['0.4242'], solution: 'probe-solution', hints: ['probe-hint'] },
+        },
+        {
+          id: 'q2',
+          type: 'question',
+          skill_id: skill.data!.id,
+          difficulty: 1,
+          facet: 'procedural',
+          public: { prompt: 'probe two' },
+          key: { accepted: ['7'], solution: 'probe-solution-two' },
         },
       ]
       await sql`select private.session_add_items(${a.id}::uuid, ${session}::bigint, ${sql.json(items as never)})`
       const seen = await a.c.from('study_sessions').select('items').eq('id', session).single()
       const text = JSON.stringify(seen.data?.items ?? '')
       report(
-        'student sees the question, not the key',
-        text.includes('probe') && !text.includes('0.4242') && !text.includes('probe-solution'),
+        'student sees the question, not the key or its hints',
+        text.includes('probe') &&
+          !text.includes('0.4242') &&
+          !text.includes('probe-solution') &&
+          !text.includes('probe-hint'),
         '',
       )
       const keys = await a.c.schema('private').from('item_keys').select('*')
@@ -233,6 +245,30 @@ async function serverRole(
         'first unaided answer is independent',
         row.data?.attempt_mode === 'independent',
         row.data?.attempt_mode ?? '',
+      )
+      const again =
+        await sql`select private.record_attempt(${a.id}::uuid, ${session}::bigint, 'q1', ${sql.json({ answer: '0.4242', verdict: 'correct', grader: 'rule', grader_version: 'check' } as never)}) as id`.then(
+          () => 'recorded',
+          (e) => code(e),
+        )
+      report('a second answer to the same question is refused', again === '23505', again)
+
+      // An unclear answer reveals nothing; its clarification is the real answer.
+      const [{ id: unclear }] =
+        await sql`select private.record_attempt(${a.id}::uuid, ${session}::bigint, 'q2', ${sql.json({ answer: '7 or 8', verdict: 'unclear', grader: 'model', grader_version: 'check' } as never)}) as id`
+      const hidden = await a.c.from('session_events').select('item').eq('id', unclear).single()
+      report(
+        'an unclear answer does not reveal the solution',
+        !JSON.stringify(hidden.data?.item ?? '').includes('probe-solution-two'),
+        '',
+      )
+      const [{ id: clarified }] =
+        await sql`select private.record_attempt(${a.id}::uuid, ${session}::bigint, 'q2', ${sql.json({ answer: '7', verdict: 'correct', grader: 'rule', grader_version: 'check' } as never)}) as id`
+      const clear = await a.c.from('session_events').select('attempt_mode, item').eq('id', clarified).single()
+      report(
+        'the clarified answer counts and shows the solution',
+        clear.data?.attempt_mode === 'independent' && JSON.stringify(clear.data?.item).includes('probe-solution-two'),
+        clear.data?.attempt_mode ?? '',
       )
       const edit = await a.c.from('session_events').update({ verdict: 'incorrect' }).eq('id', event).select('id')
       report(

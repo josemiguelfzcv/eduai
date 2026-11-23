@@ -803,6 +803,130 @@ describe('staging schema security', { skip: skipReason }, () => {
     })
   })
 
+  describe('the learning environment', () => {
+    async function material(user: string, title = 'Lecture 1') {
+      const [m] = await as(
+        db,
+        { role: 'authenticated', sub: user },
+        (tx) => tx`insert into public.materials (kind, title) values ('pdf', ${title}) returning id, role, sequence`,
+      )
+      return m
+    }
+
+    test('a material is a lecture unless the student says otherwise, and its order is theirs to set', async () => {
+      const m = await material(a)
+      assert.equal(m.role, 'lecture')
+      await as(
+        db,
+        A(),
+        (tx) =>
+          tx`update public.materials set role = 'reading', sequence = 3, lecture_date = '2026-11-20' where id = ${m.id}`,
+      )
+      const [row] =
+        await db.admin`select role, sequence, lecture_date::text as day from public.materials where id = ${m.id}`
+      assert.deepEqual({ ...row }, { role: 'reading', sequence: 3, day: '2026-11-20' })
+      assert.equal(
+        await errorCode(() => as(db, A(), (tx) => tx`update public.materials set role = 'exam' where id = ${m.id}`)),
+        '23514',
+      )
+    })
+
+    test('lessons, their sections and the Ask Lyceo conversation are visible only to their owner', async () => {
+      const m = await material(a)
+      const [lesson] = await as(
+        db,
+        A(),
+        (tx) =>
+          tx`insert into public.material_lessons (material_id, outline) values (${m.id}, ${json([{ id: 's1', title: 'Foundations' }])}) returning id`,
+      )
+      await as(
+        db,
+        A(),
+        (tx) =>
+          tx`insert into public.lesson_sections (lesson_id, section_id, content) values (${lesson.id}, 's1', 'The MGF of X is E[e^{tX}].')`,
+      )
+      await as(
+        db,
+        A(),
+        (tx) =>
+          tx`insert into public.lesson_messages (material_id, role, content, context) values (${m.id}, 'student', 'Why does it exist?', ${json({ sectionId: 's1', quote: 'E[e^{tX}]' })})`,
+      )
+      await as(
+        db,
+        A(),
+        (tx) =>
+          tx`update public.material_lessons set current_section = 's1', completed_sections = '{s1}', position = ${json({ section: 's1', block: 's1-b2', offset: 0.4 })} where id = ${lesson.id}`,
+      )
+
+      for (const table of ['material_lessons', 'lesson_sections', 'lesson_messages']) {
+        const theirs = await as(db, B(), (tx) => tx.unsafe(`select * from public.${table}`))
+        assert.equal(theirs.length, 0, `${table} is not visible to another student`)
+        const visitor = await errorCode(() =>
+          as(db, { role: 'anon' }, (tx) => tx.unsafe(`select * from public.${table}`)),
+        )
+        assert.equal(visitor, '42501', `${table} is closed to visitors`)
+      }
+      // Nobody writes into someone else's material, lesson or conversation.
+      assert.equal(
+        await errorCode(() =>
+          as(
+            db,
+            B(),
+            (tx) =>
+              tx`insert into public.material_lessons (material_id, outline) values (${m.id}, ${json([{ id: 's1' }])})`,
+          ),
+        ),
+        '42501',
+      )
+      assert.equal(
+        await errorCode(() =>
+          as(
+            db,
+            B(),
+            (tx) =>
+              tx`insert into public.lesson_sections (lesson_id, section_id, content) values (${lesson.id}, 's2', 'x')`,
+          ),
+        ),
+        '42501',
+      )
+      assert.equal(
+        await errorCode(() =>
+          as(
+            db,
+            B(),
+            (tx) => tx`insert into public.lesson_messages (material_id, role, content) values (${m.id}, 'lyceo', 'x')`,
+          ),
+        ),
+        '42501',
+      )
+      const changed = await as(
+        db,
+        B(),
+        (tx) => tx`update public.material_lessons set current_section = 'x' where id = ${lesson.id} returning id`,
+      )
+      assert.equal(changed.length, 0)
+    })
+
+    test('deleting a material deletes its lesson and conversation', async () => {
+      const m = await material(a, 'Lecture 2')
+      const [lesson] = await as(
+        db,
+        A(),
+        (tx) =>
+          tx`insert into public.material_lessons (material_id, outline) values (${m.id}, ${json([{ id: 's1' }])}) returning id`,
+      )
+      await as(
+        db,
+        A(),
+        (tx) => tx`insert into public.lesson_messages (material_id, role, content) values (${m.id}, 'student', 'Hi')`,
+      )
+      await db.admin`delete from public.materials where id = ${m.id}`
+      const [{ n }] =
+        await db.admin`select (select count(*) from public.material_lessons where id = ${lesson.id}) + (select count(*) from public.lesson_messages where material_id = ${m.id}) as n`
+      assert.equal(Number(n), 0)
+    })
+  })
+
   describe('account deletion', () => {
     test('needs a recent sign-in, and visitors and the server cannot call it', async () => {
       assert.equal(
@@ -835,7 +959,29 @@ describe('staging schema security', { skip: skipReason }, () => {
         D,
         (tx) => tx`insert into public.skills (academy_course_id, name) values (${course.id}, 'Mitosis') returning id`,
       )
-      await as(db, D, (tx) => tx`insert into public.materials (kind, title) values ('pdf', 'Lecture')`)
+      const [doomedMaterial] = await as(
+        db,
+        D,
+        (tx) => tx`insert into public.materials (kind, title) values ('pdf', 'Lecture') returning id`,
+      )
+      const [doomedLesson] = await as(
+        db,
+        D,
+        (tx) =>
+          tx`insert into public.material_lessons (material_id, outline) values (${doomedMaterial.id}, ${json([{ id: 's1', title: 'Intro' }])}) returning id`,
+      )
+      await as(
+        db,
+        D,
+        (tx) =>
+          tx`insert into public.lesson_sections (lesson_id, section_id, content) values (${doomedLesson.id}, 's1', 'Text')`,
+      )
+      await as(
+        db,
+        D,
+        (tx) =>
+          tx`insert into public.lesson_messages (material_id, role, content) values (${doomedMaterial.id}, 'student', 'Why?')`,
+      )
       await as(
         db,
         D,
@@ -882,6 +1028,9 @@ describe('staging schema security', { skip: skipReason }, () => {
         ['public.materials', 'user_id'],
         ['public.skills', 'user_id'],
         ['public.study_sessions', 'user_id'],
+        ['public.material_lessons', 'user_id'],
+        ['public.lesson_sections', 'user_id'],
+        ['public.lesson_messages', 'user_id'],
         ['private.item_keys', 'user_id'],
         ['private.ai_usage', 'user_id'],
         ['auth.users', 'id'],

@@ -150,3 +150,40 @@ export const PlusIcon = (p: IconProps) => (
     <path d="M12 5v14M5 12h14" />
   </Icon>
 )
+export const ChevronRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 6l6 6-6 6" />
+  </Icon>
+)
+export const CalendarIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+    <path d="M3.5 9.5h17M8 3v4M16 3v4M7.5 13h2M11 13h2M14.5 13h2M7.5 16.5h2M11 16.5h2" />
+  </Icon>
+)
+export const NetworkIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="5.5" cy="5.5" r="2.5" />
+    <circle cx="18.5" cy="5.5" r="2.5" />
+    <circle cx="12" cy="12" r="2.5" />
+    <circle cx="5.5" cy="18.5" r="2.5" />
+    <circle cx="18.5" cy="18.5" r="2.5" />
+    <path d="m7.4 7.4 2.8 2.8M16.6 7.4l-2.8 2.8M7.4 16.6l2.8-2.8M16.6 16.6l-2.8-2.8" />
+  </Icon>
+)
+export const SearchIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.4-4.4" />
+  </Icon>
+)
+export const SignOutIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />
+  </Icon>
+)
+export const UploadIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+  </Icon>
+)

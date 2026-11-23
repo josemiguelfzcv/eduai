@@ -2,37 +2,42 @@
 
 import Link from 'next/link'
 import type { CourseDetail } from '../../lib/academy'
+import { Breadcrumbs } from '../shell/Breadcrumbs'
 
-// The frame of the course pages beside the lessons (lectures, assignments, materials, progress): a header on the page,
-// then the content on paper cards, at the same width and rhythm as a lecture.
+// The frame of the pages inside a course and of Lyceo's own pages (lectures, assignments, materials, the knowledge
+// map, the study plan, progress): breadcrumbs, a header on the page, then the content on paper cards.
 
 export function LearnPage({
-  detail,
+  detail = null,
+  kicker,
   title,
   description,
   actions,
   children,
 }: {
-  detail: CourseDetail | null
+  detail?: CourseDetail | null
+  /** The line above the title: the course by default, nothing when null. */
+  kicker?: string | null
   title: string
   description?: React.ReactNode
   actions?: React.ReactNode
   children: React.ReactNode
 }) {
   const course = detail?.course
+  const above =
+    kicker === null ? null : (kicker ?? (course ? [course.code, course.name].filter(Boolean).join(', ') : null))
   return (
-    <div className="px-1 pb-12 pt-1 sm:px-2">
-      <div className="mx-auto max-w-[60rem]">
-        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 px-3 pt-3 sm:px-4">
+    <div className="px-8 pb-14 pt-5">
+      <div className="max-w-[72rem]">
+        <Breadcrumbs className="mb-5" />
+        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div className="min-w-0">
-            <p className="text-[0.86rem] text-ink-soft">
-              {course ? [course.code, course.name].filter(Boolean).join(', ') : ' '}
-            </p>
-            <h1 className="mt-1 font-display text-[clamp(1.55rem,2.3vw,2.05rem)] font-bold leading-[1.15] tracking-[-0.015em] text-[#1d1c19]">
+            {above && <p className="text-[0.86rem] text-ink-soft">{above}</p>}
+            <h1 className="mt-1 font-display text-[clamp(1.6rem,2.3vw,2.1rem)] font-bold leading-[1.15] tracking-[-0.015em] text-[#1d1c19]">
               {title}
             </h1>
             {description && (
-              <p className="mt-2 max-w-[40rem] text-[0.9rem] leading-relaxed text-ink-soft">{description}</p>
+              <p className="mt-2 max-w-[44rem] text-[0.9rem] leading-relaxed text-ink-soft">{description}</p>
             )}
           </div>
           {actions && <div className="flex flex-wrap gap-2.5">{actions}</div>}

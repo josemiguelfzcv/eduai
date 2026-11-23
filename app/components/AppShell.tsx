@@ -7,7 +7,8 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Logo } from './Logo'
 import { useFeatures } from './study/client'
-import { useLearnShell } from './learn/shell'
+import { Breadcrumbs } from './shell/Breadcrumbs'
+import { useShell } from './shell/Shell'
 
 /** Returns the signed-in user, sending visitors without a session back to the landing page. */
 export function useRequiredUser() {
@@ -48,8 +49,15 @@ const LOOP_NAV = [
 
 export function AppShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   // Inside a course's learning environment the page draws in its frame, without a second header.
-  const inShell = useLearnShell()
-  if (inShell) return <div className="px-5 py-8 sm:px-9 lg:px-12">{children}</div>
+  // Inside Lyceo's shell the page draws in its main column, under the breadcrumbs, without a header of its own.
+  const inShell = useShell()
+  if (inShell)
+    return (
+      <div className={`px-8 pb-14 pt-5 ${wide ? 'max-w-[76rem]' : 'max-w-[60rem]'}`}>
+        <Breadcrumbs className="mb-6" />
+        {children}
+      </div>
+    )
   return <ClassicShell wide={wide}>{children}</ClassicShell>
 }
 

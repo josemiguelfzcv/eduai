@@ -3,12 +3,15 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { LearnPage, PageNote, Paper, PILL_PRIMARY, PILL_SECONDARY } from '../../../components/learn/LearnPage'
-import { useCourseWorkspace } from '../../../components/learn/workspace'
+import { useCourseWorkspace } from '../../../components/shell/academy'
 import { StateChip } from '../../../components/study/Closure'
 import { startQuickCheck } from '../../../components/study/client'
 
-/** What Lyceo has seen the student do in the course: lectures read, and each idea's state with what's next. */
-export default function ProgressPage() {
+/**
+ * The course's Knowledge Map: what Lyceo has seen the student do in the course, idea by idea, from the same evidence
+ * as Global Progress. A list for now; the map of how the ideas connect comes next.
+ */
+export default function KnowledgeMapPage() {
   const courseId = Number(useParams<{ id: string }>().id)
   const router = useRouter()
   const workspace = useCourseWorkspace()
@@ -37,7 +40,7 @@ export default function ProgressPage() {
   return (
     <LearnPage
       detail={detail}
-      title="Progress"
+      title="Knowledge Map"
       description="What Lyceo has seen you do in this course. An idea is confirmed after two right answers on different days, at least one of them a harder question."
       actions={
         toPractice > 0 ? (

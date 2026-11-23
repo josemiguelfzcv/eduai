@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import { Deadlines } from '../../../components/academy/Deadlines'
 import { AddLink, LearnPage, PageNote, Paper } from '../../../components/learn/LearnPage'
 import { MaterialRows } from '../../../components/learn/MaterialRows'
-import { useCourseWorkspace } from '../../../components/learn/workspace'
+import { useCourseWorkspace } from '../../../components/shell/academy'
 
 /** What's due in the course, and the assignments the student added to study from. */
 export default function AssignmentsPage() {

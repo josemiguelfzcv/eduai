@@ -6,6 +6,7 @@ import '@fontsource/caveat/500.css'
 import '@fontsource/caveat/600.css'
 import 'katex/dist/katex.min.css'
 import './globals.css'
+import { AppFrame } from './components/shell/Frame'
 
 export const metadata: Metadata = {
   title: 'Lyceo: your university, understood',
@@ -16,7 +17,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppFrame>{children}</AppFrame>
+      </body>
     </html>
   )
 }

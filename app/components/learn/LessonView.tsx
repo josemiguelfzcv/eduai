@@ -9,6 +9,7 @@ import { postJSON } from '../../lib/supabase'
 import { ArrowLeftIcon, ArrowRightIcon, ChatIcon, ClockIcon, PlayIcon, SparkleIcon } from './icons'
 import { LaurelMark } from './LaurelMark'
 import { SectionBody, type AskAbout } from './LessonDocument'
+import { Breadcrumbs } from '../shell/Breadcrumbs'
 import { postStream, putKeepalive } from './stream'
 import { useReadingPosition } from './useReadingPosition'
 
@@ -163,9 +164,10 @@ export function LessonView({ view, setView, scrollRef, onAsk, onPractice, onProg
   const courseId = view.lecture.courseId
 
   return (
-    <div className="relative px-1 pb-10 pt-1 sm:px-2" onMouseUp={onSelect} onKeyUp={onSelect}>
+    <div className="relative px-8 pb-12 pt-5" onMouseUp={onSelect} onKeyUp={onSelect}>
       <div className="mx-auto max-w-[60rem]">
-        <header className="px-3 pt-3 sm:px-4">
+        <Breadcrumbs className="mb-4" />
+        <header>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[0.86rem] text-ink-soft">

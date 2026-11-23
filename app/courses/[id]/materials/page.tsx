@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { AddLink, LearnPage, PageNote, Paper } from '../../../components/learn/LearnPage'
 import { MaterialRows } from '../../../components/learn/MaterialRows'
-import { useCourseWorkspace } from '../../../components/learn/workspace'
+import { useCourseWorkspace } from '../../../components/shell/academy'
 import type { MaterialRole } from '../../../lib/views'
 
 const GROUPS: { role: MaterialRole; title: string; empty: string }[] = [

@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { AddLink, LearnPage, PageNote, Paper } from '../../../components/learn/LearnPage'
 import { MaterialRows } from '../../../components/learn/MaterialRows'
-import { useCourseWorkspace } from '../../../components/learn/workspace'
+import { useCourseWorkspace } from '../../../components/shell/academy'
 
 /** The course's lectures in the order they were taught, each opening as a written lesson. */
 export default function LecturesPage() {

@@ -17,17 +17,22 @@ export async function startQuickCheck(opts: {
 
 type Features = { learningLoop: boolean; accountDeletion?: boolean }
 let features: Promise<Features> | null = null
+// Once known, pages opened later in the visit read it straight away.
+let known: Features | null = null
 
 /** Which parts of Lyceo this deployment runs. Null until known. */
 export function useFeatures() {
-  const [value, setValue] = useState<Features | null>(null)
+  const [value, setValue] = useState<Features | null>(known)
   useEffect(() => {
     let active = true
     if (!features)
-      features = getJSON<Features>('/api/features').catch(() => {
-        features = null
-        return { learningLoop: false }
-      })
+      features = getJSON<Features>('/api/features').then(
+        (f) => (known = f),
+        () => {
+          features = null
+          return { learningLoop: false }
+        },
+      )
     features.then((f) => active && setValue(f))
     return () => {
       active = false

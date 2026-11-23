@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Logo } from './Logo'
 import { useFeatures } from './study/client'
+import { useLearnShell } from './learn/shell'
 
 /** Returns the signed-in user, sending visitors without a session back to the landing page. */
 export function useRequiredUser() {
@@ -46,6 +47,13 @@ const LOOP_NAV = [
 ]
 
 export function AppShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+  // Inside a course's learning environment the page draws in its frame, without a second header.
+  const inShell = useLearnShell()
+  if (inShell) return <div className="px-5 py-8 sm:px-9 lg:px-12">{children}</div>
+  return <ClassicShell wide={wide}>{children}</ClassicShell>
+}
+
+function ClassicShell({ children, wide }: { children: React.ReactNode; wide: boolean }) {
   const pathname = usePathname()
   const width = wide ? 'max-w-6xl' : 'max-w-4xl'
   const features = useFeatures()

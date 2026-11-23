@@ -65,6 +65,20 @@ export default function MaterialMap() {
     }
   }
 
+  // The main way to study a material: its written lesson, in the course's learning environment.
+  const lesson = async () => {
+    if (!view?.material.courseId) return
+    setBusy('lesson')
+    setError(null)
+    try {
+      await postJSON(`/api/materials/${id}/accept`, {})
+      router.push(`/courses/${view.material.courseId}/lectures/${id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open the lesson.')
+      setBusy(null)
+    }
+  }
+
   const remove = async () => {
     setBusy('delete')
     try {
@@ -103,6 +117,7 @@ export default function MaterialMap() {
         onRetry={() => getJSON<MaterialView>(`/api/materials/${id}`).then(show, (e) => setError(e.message))}
         onDecide={decide}
         onStudy={study}
+        onLesson={view.material.courseId ? lesson : undefined}
         onAskDelete={setConfirmDelete}
         onDelete={remove}
       />

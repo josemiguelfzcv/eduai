@@ -170,6 +170,30 @@ export function blockIds(blocks: Block[]): string[] {
   return out
 }
 
+/**
+ * Formulas written side by side in one display (separated by \\qquad at the top level) as separate formulas, so each
+ * sits in its own frame. Anything with an environment or a single formula stays whole.
+ */
+export function splitDisplayMath(tex: string): string[] {
+  if (/\\begin\{/.test(tex)) return [tex]
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < tex.length; i++) {
+    const c = tex[i]
+    if (c === '\\' && tex.startsWith('\\qquad', i) && depth === 0 && !/[a-zA-Z]/.test(tex[i + 6] ?? '')) {
+      parts.push(tex.slice(start, i))
+      start = i + 6
+      i += 5
+    } else if (c === '\\') i++
+    else if (c === '{') depth++
+    else if (c === '}') depth = Math.max(0, depth - 1)
+  }
+  parts.push(tex.slice(start))
+  const clean = parts.map((p) => p.trim()).filter(Boolean)
+  return clean.length >= 2 && clean.length <= 4 ? clean : [tex]
+}
+
 /** The plain words of a block, for quoting it in a question. */
 export function blockText(b: Block): string {
   switch (b.type) {

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AppShell, LoadingNote, useRequiredUser } from '../../components/AppShell'
+import { useCourseWorkspace } from '../../components/learn/workspace'
 import { CourseForm } from '../../components/academy/CourseForm'
 import { Deadlines } from '../../components/academy/Deadlines'
 import { plural } from '../../components/academy/format'
@@ -49,7 +50,13 @@ export default function CoursePage() {
       message: e instanceof Error ? e.message : 'Could not load the course.',
     })
   }, [])
-  const load = useCallback(() => fetchDetail().then(showDetail, showProblem), [fetchDetail, showDetail, showProblem])
+  // Inside the learning environment, the sidebar shows the course too: it reloads with the page.
+  const workspace = useCourseWorkspace()
+  const reloadWorkspace = workspace?.reload
+  const load = useCallback(() => {
+    reloadWorkspace?.()
+    return fetchDetail().then(showDetail, showProblem)
+  }, [fetchDetail, showDetail, showProblem, reloadWorkspace])
 
   useEffect(() => {
     if (user) fetchDetail().then(showDetail, showProblem)
@@ -98,10 +105,12 @@ export default function CoursePage() {
 
   return (
     <AppShell wide>
-      <Link href="/dashboard" className="text-[0.9rem] text-ink-soft no-underline hover:text-ink">
-        My Academy
-      </Link>
-      <header className="mt-3 flex flex-wrap items-end justify-between gap-5">
+      {!workspace && (
+        <Link href="/dashboard" className="text-[0.9rem] text-ink-soft no-underline hover:text-ink">
+          My Academy
+        </Link>
+      )}
+      <header className={`${workspace ? '' : 'mt-3 '}flex flex-wrap items-end justify-between gap-5`}>
         <div>
           <h1 className="text-[clamp(2.1rem,4vw,3rem)]">{course.name}</h1>
           <p className="mt-1 text-ink-soft">{[course.code, course.term].filter(Boolean).join(', ')}</p>

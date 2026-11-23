@@ -26,6 +26,13 @@
   --color-gold-deep: #7e6224;
   --color-terracotta: #a84d26;
 
+  /* The learning environment: the course sidebar and its actions in a deeper, leafier green; warm paper surfaces. */
+  --color-grove: #20391f;
+  --color-grove-soft: #3d5a37;
+  --color-paper: #fdf7ef;
+  --color-parchment: #f3ecdd;
+  --color-sage: #e3e2cc;
+
   --color-board: #213a30;
   --color-board-deep: #162a22;
   --color-chalk: #f1ede2;
@@ -334,4 +341,18 @@
   .spinner {
     animation: none;
   }
+}
+
+/*
+  Written lessons: formulas in quiet frames, at the size of the text around them. Outside the layers on purpose: KaTeX's
+  own stylesheet isn't layered, so only unlayered rules (more specific than its own) can resize its output.
+*/
+.lesson-text .katex {
+  font-size: 1.04em;
+}
+.lesson-math .katex-display {
+  margin: 0;
+}
+.lesson-math .katex-display > .katex {
+  font-size: 1.08em;
 }

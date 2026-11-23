@@ -15,6 +15,8 @@ export type MaterialMapProps = {
   onRetry: () => void
   onDecide: (idea: IdeaView, keep: boolean) => void
   onStudy: () => void
+  /** Where the learning environment is on: open the material as a written lesson (the main way to study it). */
+  onLesson?: () => void
   onAskDelete: (ask: boolean) => void
   onDelete: () => void
 }
@@ -80,26 +82,55 @@ export function MaterialMapView(p: MaterialMapProps) {
               <p className="max-w-[30ch] font-chalk text-[clamp(1.6rem,3.2vw,2.05rem)] leading-snug text-chalk">
                 {p.view.headline}
               </p>
-              <button
-                type="button"
-                className="btn btn-gold px-6 py-3 text-[1.05rem]"
-                onClick={p.onStudy}
-                disabled={p.busy !== null || !m.courseId}
-              >
-                {p.busy === 'study' ? (
-                  <>
-                    <span className="spinner" /> Writing your questions
-                  </>
-                ) : (
-                  'Start studying'
-                )}
-              </button>
+              {p.onLesson ? (
+                <div className="flex flex-col items-center gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-gold px-6 py-3 text-[1.05rem]"
+                    onClick={p.onLesson}
+                    disabled={p.busy !== null || !m.courseId}
+                  >
+                    {p.busy === 'lesson' ? (
+                      <>
+                        <span className="spinner" /> Opening the lesson
+                      </>
+                    ) : (
+                      'Start the lesson'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[0.95rem] text-chalk underline underline-offset-4 disabled:opacity-60"
+                    onClick={p.onStudy}
+                    disabled={p.busy !== null || !m.courseId}
+                  >
+                    {p.busy === 'study' ? 'Writing your questions' : 'Or take a Quick Check first'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-gold px-6 py-3 text-[1.05rem]"
+                  onClick={p.onStudy}
+                  disabled={p.busy !== null || !m.courseId}
+                >
+                  {p.busy === 'study' ? (
+                    <>
+                      <span className="spinner" /> Writing your questions
+                    </>
+                  ) : (
+                    'Start studying'
+                  )}
+                </button>
+              )}
               <p className="max-w-[46ch] text-[0.92rem] text-chalk/75" aria-live="polite">
                 {p.busy === 'study'
                   ? 'Theo is writing a short Quick Check from these pages. About half a minute.'
                   : flagged.length
                     ? `${flagged.length === 1 ? 'One idea needs' : `${flagged.length} ideas need`} a quick yes or no below. Starting accepts the map as it is.`
-                    : 'A short Quick Check on these ideas, one question at a time.'}
+                    : p.onLesson
+                      ? 'Lyceo teaches this material section by section, with Ask Lyceo beside it for questions.'
+                      : 'A short Quick Check on these ideas, one question at a time.'}
               </p>
             </div>
             <Theo size={84} float={false} className="absolute -bottom-8 right-6" />

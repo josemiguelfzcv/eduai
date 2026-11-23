@@ -1,7 +1,15 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderInline } from '../app/lib/lesson-render'
-import { anchorAt, blockIds, cleanOutline, parseSection, readingMinutes, scrollFor } from '../app/lib/written-lesson'
+import {
+  anchorAt,
+  blockIds,
+  cleanOutline,
+  parseSection,
+  readingMinutes,
+  scrollFor,
+  splitDisplayMath,
+} from '../app/lib/written-lesson'
 
 const SECTION = `Today we study **moment generating functions** (MGFs).
 
@@ -77,6 +85,20 @@ describe('a written lesson section', () => {
     assert.match(html, /<em>gently<\/em>/)
     assert.match(html, /katex/)
     assert.match(html, /&lt;script&gt;/)
+    // A full stop after a formula doesn't wrap onto a line of its own.
+    const sentence = renderInline('is infinite for all $t \\neq 0$. For example')
+    assert.match(sentence, /<span class="whitespace-nowrap"><span class="katex">.*<\/span>\.<\/span> For example$/)
+  })
+
+  test('formulas written side by side get a frame each; braces and environments keep them whole', () => {
+    assert.deepEqual(splitDisplayMath("E[X] = M_X'(0), \\qquad \\operatorname{Var}(X) = M_X''(0) - (M_X'(0))^2."), [
+      "E[X] = M_X'(0),",
+      "\\operatorname{Var}(X) = M_X''(0) - (M_X'(0))^2.",
+    ])
+    assert.deepEqual(splitDisplayMath('M_X(t) = E[e^{tX}]'), ['M_X(t) = E[e^{tX}]'])
+    assert.deepEqual(splitDisplayMath('f(x) = \\begin{cases} 1 \\qquad x > 0 \\end{cases}').length, 1)
+    assert.deepEqual(splitDisplayMath('\\text{a}{b \\qquad c}'), ['\\text{a}{b \\qquad c}'])
+    assert.deepEqual(splitDisplayMath('a \\qquadx b'), ['a \\qquadx b'])
   })
 
   test('reading time counts formulas as slower than words', () => {

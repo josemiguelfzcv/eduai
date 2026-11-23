@@ -29,6 +29,14 @@ function put(upload: Started['upload'], file: File, onProgress: (pct: number) =>
   })
 }
 
+type Role = 'lecture' | 'assignment' | 'reading' | 'other'
+const ROLES: { id: Role; label: string }[] = [
+  { id: 'lecture', label: 'Lecture' },
+  { id: 'assignment', label: 'Assignment' },
+  { id: 'reading', label: 'Reading' },
+  { id: 'other', label: 'Other' },
+]
+
 /** Add material: one class's slides or notes as a PDF, uploaded privately, read page by page and mapped into ideas. */
 export default function AddMaterial() {
   useRequiredUser()
@@ -39,6 +47,8 @@ export default function AddMaterial() {
   const [newCourse, setNewCourse] = useState('')
   const [title, setTitle] = useState('')
   const [graded, setGraded] = useState(false)
+  const [role, setRole] = useState<Role>('lecture')
+  const [lectureDate, setLectureDate] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [step, setStep] = useState<Step>('idle')
@@ -52,7 +62,10 @@ export default function AddMaterial() {
     getJSON<{ courses: AcademyCourse[] }>('/api/academy/courses')
       .then(({ courses: list }) => {
         setCourses(list)
-        const wanted = new URLSearchParams(window.location.search).get('course')
+        const params = new URLSearchParams(window.location.search)
+        const wanted = params.get('course')
+        const kind = params.get('role')
+        if (ROLES.some((r) => r.id === kind)) setRole(kind as Role)
         if (wanted && list.some((c) => String(c.id) === wanted)) setCourseId(wanted)
         else if (list.length === 1) setCourseId(String(list[0].id))
       })
@@ -93,7 +106,9 @@ export default function AddMaterial() {
           contentType: 'application/pdf',
           bytes: file.size,
           academyCourseId: course,
-          policy: graded ? 'graded' : 'study',
+          policy: role === 'assignment' || (graded && role !== 'lecture') ? 'graded' : 'study',
+          role,
+          lectureDate: lectureDate || null,
         })
         id = started.materialId
         setMaterialId(id)
@@ -230,21 +245,72 @@ export default function AddMaterial() {
           )}
         </div>
 
-        <label className="flex items-start gap-3 text-[0.95rem]">
+        <fieldset>
+          <legend className="mb-2 font-bold">What is it?</legend>
+          <div className="flex flex-wrap gap-2">
+            {ROLES.map((r) => (
+              <label
+                key={r.id}
+                className={`cursor-pointer rounded-full border px-4 py-1.5 text-[0.92rem] transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-gold ${
+                  role === r.id
+                    ? 'border-forest bg-forest text-ivory'
+                    : 'border-line bg-[#fffdf8] hover:border-stone-deep'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="role"
+                  value={r.id}
+                  className="sr-only"
+                  checked={role === r.id}
+                  onChange={() => setRole(r.id)}
+                  disabled={busy}
+                />
+                {r.label}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[0.88rem] text-ink-soft">
+            {role === 'lecture'
+              ? 'Lectures are taught in order in the course, each as a written lesson.'
+              : role === 'assignment'
+                ? 'Lyceo practices its ideas with problems of its own and never solves the assignment’s.'
+                : 'It sits with the course’s materials, and opens as a written lesson too.'}
+          </p>
+        </fieldset>
+
+        <div>
+          <label htmlFor="lecture-date" className="mb-2 block font-bold">
+            {role === 'assignment' ? 'Date handed out' : 'Date given'}{' '}
+            <span className="font-normal text-ink-soft">(optional)</span>
+          </label>
           <input
-            type="checkbox"
-            className="mt-1 size-4 accent-forest"
-            checked={graded}
-            onChange={(e) => setGraded(e.target.checked)}
+            id="lecture-date"
+            type="date"
+            className="field max-w-[14rem]"
+            value={lectureDate}
+            onChange={(e) => setLectureDate(e.target.value)}
             disabled={busy}
           />
-          <span>
-            This is a graded assignment
-            <span className="block text-[0.88rem] text-ink-soft">
-              Lyceo will practice its ideas with problems of its own and never solve the assignment’s.
+        </div>
+
+        {role !== 'assignment' && role !== 'lecture' && (
+          <label className="flex items-start gap-3 text-[0.95rem]">
+            <input
+              type="checkbox"
+              className="mt-1 size-4 accent-forest"
+              checked={graded}
+              onChange={(e) => setGraded(e.target.checked)}
+              disabled={busy}
+            />
+            <span>
+              This is graded work
+              <span className="block text-[0.88rem] text-ink-soft">
+                Lyceo will practice its ideas with problems of its own and never solve its problems.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        )}
 
         {error && (
           <p role="alert" className="rounded-xl border border-terracotta/40 bg-terracotta/5 px-4 py-3 text-terracotta">

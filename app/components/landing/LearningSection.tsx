@@ -1,18 +1,23 @@
 import { LANDING } from '../../lib/art'
 import { PencilIcon, PlayIcon, RepeatIcon } from '../learn/icons'
 import { LEARNING_SCREEN, LearningScreen } from './LearningPreview'
-import { Stage } from './Stage'
+import { quadTransform, Stage } from './Stage'
 
-// Section 3, as the approved design: a 1916 × 821 picture that scales with the window. The words on the left, a
-// lecture on the laptop in the middle, the three ways Lyceo teaches on the right. Positions are measured on the
-// design, in its pixels, so sizes are in cqw of the section.
+// Section 3: the clean laptop scene (1915 × 821, scaled with the window), a lecture on the laptop's display, the words
+// on its left and the three ways Lyceo teaches on its right, as in the approved design. The scene's sides are misted
+// (in the picture itself) so the words read. Positions are in the picture's pixels, so sizes are in cqw of the section.
 
-const W = 1916
+const W = 1915
 const H = 821
 const v = (px: number) => `${((px / W) * 100).toFixed(3)}cqw`
 
-// The laptop's screen in the picture.
-const SCREEN = { left: 517, top: 112 }
+// The laptop's display in the picture: its corners (it is a hair wider at the bottom), half a pixel into the bezel.
+const DISPLAY_CORNERS = [
+  [502.9, 121.1],
+  [1401.5, 121.4],
+  [1406.1, 648.2],
+  [502.8, 648.2],
+] as const
 
 const FEATURES = [
   {
@@ -33,7 +38,7 @@ export function LearningSection() {
     <section
       id="learning"
       aria-labelledby="learning-title"
-      className="relative w-full scroll-mt-[76px] overflow-hidden bg-[#f6eee4] [container-type:inline-size]"
+      className="relative w-full scroll-mt-[68px] overflow-hidden bg-[#f6eee4] [container-type:inline-size]"
       style={{ aspectRatio: `${W} / ${H}` }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -48,19 +53,19 @@ export function LearningSection() {
 
       <p
         className="absolute m-0 flex items-center whitespace-nowrap font-sans font-semibold uppercase leading-none text-[#a4701c]"
-        style={{ left: v(60), top: v(205.4), fontSize: v(19), letterSpacing: '0.134em', gap: v(18) }}
+        style={{ left: v(60), top: v(206), fontSize: v(18.2), letterSpacing: '0.134em', gap: v(17) }}
       >
         <span
           aria-hidden="true"
           className="inline-block rounded-full bg-[#a87623]"
-          style={{ width: v(44), height: v(4) }}
+          style={{ width: v(42), height: v(4) }}
         />
         The learning experience
       </p>
       <h2
         id="learning-title"
         className="absolute m-0 whitespace-nowrap font-display font-semibold text-[#1d2f1a] [font-variation-settings:'opsz'_24]"
-        style={{ left: v(58), top: v(268.7), fontSize: v(60), lineHeight: v(60), letterSpacing: '-0.035em' }}
+        style={{ left: v(58), top: v(266), fontSize: v(57.5), lineHeight: v(58), letterSpacing: '-0.035em' }}
       >
         From curiosity to
         <br />
@@ -68,7 +73,7 @@ export function LearningSection() {
       </h2>
       <p
         className="absolute m-0 whitespace-nowrap font-display text-[#26302a] [font-variation-settings:'opsz'_36]"
-        style={{ left: v(61), top: v(399.6), fontSize: v(24.3), lineHeight: v(34) }}
+        style={{ left: v(61), top: v(397), fontSize: `max(14px, ${v(23.3)})`, lineHeight: 1.4 }}
       >
         Every lecture holds something worth
         <br />
@@ -106,9 +111,15 @@ export function LearningSection() {
         ))}
       </ul>
 
-      {/* A lecture on the laptop's screen. */}
+      {/* A lecture on the laptop's display. */}
       <Stage width={W} height={H}>
-        <div className="absolute" style={{ ...SCREEN, ...LEARNING_SCREEN }}>
+        <div
+          className="absolute left-0 top-0 origin-top-left"
+          style={{
+            ...LEARNING_SCREEN,
+            transform: quadTransform(LEARNING_SCREEN.width, LEARNING_SCREEN.height, DISPLAY_CORNERS),
+          }}
+        >
           <LearningScreen />
         </div>
       </Stage>

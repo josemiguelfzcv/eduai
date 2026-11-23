@@ -21,7 +21,7 @@ export function LyceumSection() {
     <section
       id="lyceum"
       aria-labelledby="lyceum-title"
-      className="relative w-full scroll-mt-[76px] overflow-hidden bg-[#efe4d0] [container-type:inline-size]"
+      className="relative w-full scroll-mt-[68px] overflow-hidden bg-[#efe4d0] [container-type:inline-size]"
       style={{ aspectRatio: '1920 / 819' }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

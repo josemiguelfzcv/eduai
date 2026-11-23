@@ -12,11 +12,29 @@ import {
 import { LaurelMark } from '../learn/LaurelMark'
 
 // My Academy as the tablet in section 2 shows it: a 1200 × 770 screen, laid out on the design's own screen (measured
-// from the design, flattened) and laid onto the tablet by the section. Drawn with the app's pieces: the one sidebar
+// from the design, flattened), inside a tablet the section stands on its picture's ledge. Drawn with the app's pieces: the one sidebar
 // (the same three places and the courses), the student's courses, progress counted in ideas, and the next step.
 // Sample courses; nothing here is a statistic about Lyceo.
 
 export const ACADEMY_SCREEN = { width: 1200, height: 770 }
+const BEZEL = 26
+/** The tablet around the screen, drawn flat; the section lays it into its picture in perspective. */
+export const ACADEMY_TABLET = { width: ACADEMY_SCREEN.width + 2 * BEZEL, height: ACADEMY_SCREEN.height + 2 * BEZEL }
+
+export function AcademyTablet() {
+  return (
+    <div
+      className="relative rounded-[50px] bg-[linear-gradient(135deg,#fffdf8,#f1e9dc_48%,#ddd2c1)] shadow-[10px_5px_0_-1px_#cbbfac,12px_7px_3px_-1px_rgba(60,40,15,0.35),inset_0_0_0_2px_rgba(255,255,255,0.75),inset_0_0_0_3px_rgba(120,100,70,0.12)]"
+      style={ACADEMY_TABLET}
+    >
+      <div className="absolute" style={{ left: BEZEL, top: BEZEL }}>
+        <AcademyScreen />
+        {/* Daylight on the glass, and the line where the glass meets the body. */}
+        <span className="pointer-events-none absolute inset-0 rounded-[24px] bg-[linear-gradient(115deg,rgba(255,255,255,0.14),rgba(255,255,255,0)_38%)] shadow-[inset_0_0_0_1.5px_rgba(60,45,20,0.25)]" />
+      </div>
+    </div>
+  )
+}
 
 const THUMBS = '/images/lyceo/course_thumbnails'
 const COURSES = [

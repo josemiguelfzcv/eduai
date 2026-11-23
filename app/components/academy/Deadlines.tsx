@@ -17,23 +17,28 @@ export function Deadlines({
   courses,
   courseId,
   onChange,
+  heading = true,
 }: {
   deadlines: DatedDeadline[]
   courses: AcademyCourse[]
   /** When set, the list belongs to one course and new deadlines go there. */
   courseId?: number
   onChange: () => void
+  /** False inside a card that already names the list. */
+  heading?: boolean
 }) {
   const [adding, setAdding] = useState(false)
   const upcoming = deadlines.filter((d) => !d.completedAt)
   const done = deadlines.filter((d) => d.completedAt)
 
   return (
-    <section aria-labelledby="deadlines-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="deadlines-title" className="text-[1.5rem]">
-          Upcoming
-        </h2>
+    <section aria-labelledby={heading ? 'deadlines-title' : undefined} aria-label={heading ? undefined : 'Deadlines'}>
+      <div className={`flex items-center gap-3 ${heading ? 'justify-between' : 'justify-end'}`}>
+        {heading && (
+          <h2 id="deadlines-title" className="text-[1.5rem]">
+            Upcoming
+          </h2>
+        )}
         {!adding && courses.length > 0 && (
           <button type="button" className="btn btn-quiet px-4 py-2 text-[0.85rem]" onClick={() => setAdding(true)}>
             Add deadline

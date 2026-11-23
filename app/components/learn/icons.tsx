@@ -198,6 +198,55 @@ export const PencilIcon = (p: IconProps) => (
     <path d="M4 20l1-4L15.5 5.5a2.1 2.1 0 0 1 3 3L8 19z M13.5 7.5l3 3" />
   </Icon>
 )
+export const ChevronUpIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 15l6-6 6 6" />
+  </Icon>
+)
+export const SigmaIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M17.5 7V5h-11l6 7-6 7h11v-2" />
+  </Icon>
+)
+export const LaptopIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="5" y="5" width="14" height="10" rx="1.5" />
+    <path d="M3 18.5h18" />
+  </Icon>
+)
+export const CapIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2.5 9.5 12 5l9.5 4.5L12 14zM6.5 11.5v4.2c1.5 1.4 3.4 2.1 5.5 2.1s4-.7 5.5-2.1v-4.2M21.5 9.5v5" />
+  </Icon>
+)
+export const TrendIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m3 16 5.5-5.5 4 4L21 6M15.5 6H21v5.5" />
+  </Icon>
+)
+export const AlertIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 4 2.8 19.5h18.4zM12 10v4.5M12 17.2v.1" />
+  </Icon>
+)
+export const ActivityIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 12h4l2.5-6 4.5 12 2.5-6H21" />
+  </Icon>
+)
+export const GridIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+  </Icon>
+)
+export const ListIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.1M4.5 12h.1M4.5 17.5h.1" />
+  </Icon>
+)
 export const BellIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4" />

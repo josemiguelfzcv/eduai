@@ -216,6 +216,12 @@ export function buildCourseDetail(data: AcademyData, courseId: number, today: st
   let materials: MaterialSummary[] | undefined
   if (loop) {
     const l = loop.learning
+    const firstAnswer = new Map<number, string>()
+    for (const a of l.answers) {
+      if (a.verdict === 'unclear' || a.needsReview) continue
+      const day = firstAnswer.get(a.skillId)
+      if (!day || a.day < day) firstAnswer.set(a.skillId, a.day)
+    }
     ideas = l.active
       .filter((s) => s.academy_course_id === courseId)
       .map((s) => {
@@ -228,6 +234,10 @@ export function buildCourseDetail(data: AcademyData, courseId: number, today: st
           label: STATE_LABEL[st.state],
           reason: st.reason,
           next: st.next,
+          firstAnswerDay: firstAnswer.get(s.id) ?? null,
+          lastAnswerDay: st.lastAnswerDay,
+          confirmedOn: st.confirmedOn,
+          reviewDueOn: st.reviewDueOn,
         }
       })
     const counts = new Map(materialInfos(l).map((m) => [m.id, m.skillIds.length]))

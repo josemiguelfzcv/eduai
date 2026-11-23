@@ -3,9 +3,9 @@
 import type { User } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import type { AcademyCourse, CourseDetail } from '../../lib/academy'
+import type { AcademyCourse, AcademySnapshot, CourseDetail } from '../../lib/academy'
 import { clockQuery } from '../../lib/clock'
-import { getJSON } from '../../lib/supabase'
+import { ApiError, getJSON, supabase } from '../../lib/supabase'
 import { useRequiredUser } from '../AppShell'
 
 // The student's academy as the shell knows it: their courses (for the sidebar) and the details of each course opened
@@ -21,6 +21,10 @@ type Academy = {
   /** Loads every course's details, for search and the progress pages. */
   loadAll: () => Promise<void>
   reloadCourses: () => Promise<void>
+  /** My Academy as a whole (the plan, the deadlines, each course's summary): loaded when a page first asks. */
+  snapshot: AcademySnapshot | null
+  snapshotProblem: { setup: boolean; message: string } | null
+  loadSnapshot: (fresh?: boolean) => Promise<void>
 }
 
 const AcademyContext = createContext<Academy | null>(null)
@@ -65,6 +69,38 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
     return request
   }, [])
 
+  const [snapshot, setSnapshot] = useState<AcademySnapshot | null>(null)
+  const [snapshotProblem, setSnapshotProblem] = useState<Academy['snapshotProblem']>(null)
+  const snapshotRequest = useRef<Promise<void> | null>(null)
+  const registered = useRef(false)
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+  const loadSnapshot = useCallback((fresh = false) => {
+    if (snapshotRequest.current && !fresh) return snapshotRequest.current
+    const request = (async () => {
+      try {
+        const me = userRef.current
+        // The student's own row, written on their first visit.
+        if (me && !registered.current) {
+          registered.current = true
+          await supabase.from('users').upsert({ id: me.id, email: me.email, name: me.user_metadata?.full_name })
+        }
+        setSnapshot(await getJSON<AcademySnapshot>(`/api/academy?${clockQuery()}`))
+        setSnapshotProblem(null)
+      } catch (e) {
+        snapshotRequest.current = null
+        setSnapshotProblem({
+          setup: e instanceof ApiError && e.status === 503,
+          message: e instanceof Error ? e.message : 'Could not load My Academy.',
+        })
+      }
+    })()
+    snapshotRequest.current = request
+    return request
+  }, [])
+
   const loadAll = useCallback(async () => {
     await Promise.all((coursesRef.current ?? []).map((c) => loadCourse(c.id)))
   }, [loadCourse])
@@ -74,8 +110,8 @@ export function AcademyProvider({ children }: { children: React.ReactNode }) {
   }, [user, reloadCourses])
 
   const value = useMemo(
-    () => ({ user, courses, details, loadCourse, loadAll, reloadCourses }),
-    [user, courses, details, loadCourse, loadAll, reloadCourses],
+    () => ({ user, courses, details, loadCourse, loadAll, reloadCourses, snapshot, snapshotProblem, loadSnapshot }),
+    [user, courses, details, loadCourse, loadAll, reloadCourses, snapshot, snapshotProblem, loadSnapshot],
   )
   return <AcademyContext.Provider value={value}>{children}</AcademyContext.Provider>
 }
@@ -99,4 +135,27 @@ export function useCourseWorkspace() {
   )
   if (!academy || !valid) return null
   return { detail: academy.details[id] ?? null, reload }
+}
+
+/** My Academy's snapshot, shared by the pages that show it (and the bell): loaded on first use. */
+export function useSnapshot() {
+  const academy = useAcademy()
+  const user = academy?.user
+  const load = academy?.loadSnapshot
+  useEffect(() => {
+    if (user && load) load()
+  }, [user, load])
+  const reload = useCallback(() => (load ? load(true) : Promise.resolve()), [load])
+  return { snapshot: academy?.snapshot ?? null, problem: academy?.snapshotProblem ?? null, reload }
+}
+
+/** Every course's details (lectures, ideas, deadlines), for the pages that look across courses. */
+export function useAllCourses() {
+  const academy = useAcademy()
+  const courses = academy?.courses
+  const loadAll = academy?.loadAll
+  useEffect(() => {
+    if (courses?.length) loadAll?.()
+  }, [courses, loadAll])
+  return { courses: courses ?? null, details: academy?.details ?? {} }
 }

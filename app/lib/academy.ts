@@ -118,6 +118,11 @@ export type IdeaSummary = {
   label: string
   reason: string
   next: string | null
+  /** Days (YYYY-MM-DD) from the evidence: the first and the last answer, when it was confirmed, when a review is due. */
+  firstAnswerDay?: string | null
+  lastAnswerDay?: string | null
+  confirmedOn?: string | null
+  reviewDueOn?: string | null
 }
 
 export type MaterialSummary = {

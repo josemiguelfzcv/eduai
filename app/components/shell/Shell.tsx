@@ -7,13 +7,12 @@ import { useMedia, usePreference } from './store'
 
 // The application shell, the same on every page inside Lyceo (desktop web):
 //
-//   ┌ toggle ┬ logo ─────┬ My Academy · The Lyceum ─────────────────── search · Ask Lyceo · you ┐
-//   │ global sidebar      │ breadcrumbs                                    │ Ask Lyceo (optional) │
-//   │ My Academy          │ the page                                       │                      │
-//   │ Study Plan          │                                                │                      │
-//   │ Global Progress     │                                                │                      │
-//   │ Your Courses ▾      │                                                │                      │
-//   └─────────────────────┴────────────────────────────────────────────────┴──────────────────────┘
+//   ┌ Lyceo ──────────────┬──────────────────────────── search · Ask Lyceo · bell · you ┬──────────────────────┐
+//   │ My Academy          │ breadcrumbs (inside a course)                              │ Ask Lyceo (optional) │
+//   │ Study Plan          │ the page                                                   │                      │
+//   │ Global Progress     │                                                            │                      │
+//   │ Your Courses ▾      │                                                            │                      │
+//   └─────────────────────┴────────────────────────────────────────────────────────────┴──────────────────────┘
 //
 // It stays mounted across pages, so the sidebar keeps its open courses and sections and the page column keeps its
 // own scroll. The sidebar folds to a rail and Ask Lyceo folds away, independently; both choices are remembered.
@@ -21,7 +20,7 @@ import { useMedia, usePreference } from './store'
 type Shell = {
   /** The page column's scroll container. Its top runs under the top bar (HEADER pixels). */
   scrollRef: React.RefObject<HTMLDivElement | null>
-  /** A page with a scene of its own (a banner up behind the top bar) holds this while it's shown. */
+  /** Kept for pages with a scene of their own behind the top bar; the bar is clear now, so it does nothing. */
   holdScene: () => () => void
   /** Puts Ask Lyceo (or nothing) in the right panel; learning workspaces register it while they're open. */
   setAside: (node: React.ReactNode | null) => void
@@ -33,7 +32,7 @@ type Shell = {
 const ShellContext = createContext<Shell | null>(null)
 export const useShell = () => useContext(ShellContext)
 
-export const SIDEBAR_OPEN = 252
+export const SIDEBAR_OPEN = 280
 /** The top bar's height. Pages scroll under it, so a page's own top starts this far down. */
 export const HEADER = 64
 export const SIDEBAR_RAIL = 76
@@ -46,11 +45,7 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
   // Wide desktops keep Ask Lyceo beside the page; narrower laptop screens open it over the page.
   const wide = useMedia('(min-width: 1280px)')
   const scrollRef = useRef<HTMLDivElement | null>(null)
-  const [scenes, setScenes] = useState(0)
-  const holdScene = useCallback(() => {
-    setScenes((n) => n + 1)
-    return () => setScenes((n) => n - 1)
-  }, [])
+  const holdScene = useCallback(() => () => {}, [])
   // Once the page has scrolled, the top bar sets itself on ivory so it reads over the page.
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -90,13 +85,10 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ShellContext.Provider value={shell}>
-      <div className="relative flex h-dvh min-w-[1024px] flex-col overflow-hidden bg-[#f6eee2] text-ink">
+      <div className="relative flex h-dvh min-w-[1024px] flex-col overflow-hidden bg-[#f8f1e6] text-ink">
         <TopBar
-          sidebarOpen={open}
-          sidebarWidth={open ? SIDEBAR_OPEN : SIDEBAR_RAIL}
-          onToggleSidebar={() => setSidebar(open ? 'rail' : 'open')}
+          left={open ? SIDEBAR_OPEN : SIDEBAR_RAIL}
           motion={motion}
-          scene={scenes > 0}
           scrolled={scrolled}
           ask={aside ? { visible: asideVisible, toggle: () => (asideVisible ? closeAside() : openAside()) } : null}
         />
@@ -105,10 +97,14 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
           <nav
             id="app-sidebar"
             aria-label="Lyceo"
-            style={{ width: open ? SIDEBAR_OPEN : SIDEBAR_RAIL, marginTop: HEADER }}
-            className={`relative z-10 mb-3 shrink-0 overflow-hidden rounded-br-[22px] ${open ? 'rounded-tr-[22px]' : ''} bg-grove text-ivory shadow-[8px_10px_30px_-22px_rgba(20,40,20,0.7)] transition-[width] ${motion}`}
+            style={{ width: open ? SIDEBAR_OPEN : SIDEBAR_RAIL }}
+            className={`relative z-30 shrink-0 overflow-hidden rounded-r-[30px] bg-[linear-gradient(180deg,#1a4428,#133a22_55%,#0f3320)] text-ivory shadow-[10px_0_34px_-24px_rgba(20,40,20,0.75)] transition-[width] ${motion}`}
           >
-            {open ? <GlobalSidebar /> : <SidebarRail />}
+            {open ? (
+              <GlobalSidebar onCollapse={() => setSidebar('rail')} />
+            ) : (
+              <SidebarRail onExpand={() => setSidebar('open')} />
+            )}
           </nav>
 
           <main className="relative flex min-w-0 flex-1">

@@ -13,6 +13,7 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
   ClipboardIcon,
   CloseIcon,
   HomeIcon,
@@ -20,11 +21,13 @@ import {
   NetworkIcon,
   PlayCircleIcon,
   PlusIcon,
+  SidebarIcon,
 } from '../learn/icons'
+import { LaurelMark } from '../learn/LaurelMark'
 import { useAcademy } from './academy'
 import { useLocation, type Section } from './location'
-import { useCourseArt } from './art'
-import { usePreferenceSet } from './store'
+import { CourseGlyph } from './glyph'
+import { usePreference, usePreferenceSet } from './store'
 
 // The one navigation of Lyceo. Always the same three places, then the student's courses; each course opens into the
 // same five parts (Overview, Lectures, Assignments, Materials, Knowledge Map), and Lectures and Assignments open into
@@ -69,7 +72,7 @@ function useOpenState() {
   return { where, courses, updateCourses, sections, updateSections }
 }
 
-export function GlobalSidebar() {
+export function GlobalSidebar({ onCollapse }: { onCollapse: () => void }) {
   const academy = useAcademy()
   const router = useRouter()
   const { where, courses: openCourses, updateCourses, sections, updateSections } = useOpenState()
@@ -90,11 +93,33 @@ export function GlobalSidebar() {
   }, [where.path])
 
   const courses = academy?.courses
+  const [list, setList] = usePreference('lyceo.nav.courseList', 'open', ['open', 'closed'] as const)
   return (
     <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-5 [scrollbar-color:rgba(246,241,231,0.25)_transparent] [scrollbar-width:thin]">
-        <p className="px-3 font-display text-[1.16rem] font-semibold tracking-[-0.01em] text-ivory">My Academy</p>
-        <ul className="mt-2.5 space-y-[3px]">
+      <div className="flex h-[70px] shrink-0 items-center justify-between pl-8 pr-3.5">
+        <Link
+          href="/dashboard"
+          aria-label="Lyceo, My Academy"
+          className="flex items-center gap-2.5 rounded-lg text-ivory no-underline"
+        >
+          <LaurelMark size={38} className="text-[#e9dcae]" />
+          <span className="font-display text-[2.05rem] font-medium leading-none tracking-[-0.01em]">Lyceo</span>
+        </Link>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Collapse the sidebar"
+          aria-expanded
+          aria-controls="app-sidebar"
+          title="Collapse the sidebar"
+          className="grid size-9 place-items-center rounded-lg text-ivory/40 transition-colors hover:bg-ivory/[0.08] hover:text-ivory"
+        >
+          <SidebarIcon size={19} />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-4 [scrollbar-color:rgba(246,241,231,0.25)_transparent] [scrollbar-width:thin]">
+        <p className="px-3 font-display text-[1.62rem] font-medium tracking-[-0.01em] text-ivory">My Academy</p>
+        <ul className="mt-3 space-y-0.5">
           {GLOBAL_PLACES.map((place) => {
             const active = place.match(where.path)
             const Icon = place.icon
@@ -104,11 +129,11 @@ export function GlobalSidebar() {
                   href={place.href}
                   ref={active ? activeRef : undefined}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-3 rounded-[10px] px-3 py-[8px] text-[0.93rem] no-underline transition-colors ${
-                    active ? 'bg-ivory/[0.18] text-ivory' : 'text-ivory/[0.88] hover:bg-ivory/[0.08] hover:text-ivory'
+                  className={`flex items-center gap-[18px] rounded-[12px] px-[18px] py-[10px] text-[1.1rem] leading-[1.3] no-underline transition-colors ${
+                    active ? 'bg-ivory/[0.16] text-ivory' : 'text-ivory/[0.9] hover:bg-ivory/[0.08] hover:text-ivory'
                   }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={23} />
                   {place.label}
                 </Link>
               </li>
@@ -116,10 +141,18 @@ export function GlobalSidebar() {
           })}
         </ul>
 
-        <div className="mx-2 my-4 border-t border-ivory/[0.12]" />
-        <p className="px-3 text-[0.8rem] font-medium text-ivory/70">Your Courses</p>
+        <div className="mx-3 mb-4 mt-5 border-t border-ivory/[0.16]" />
+        <button
+          type="button"
+          onClick={() => setList(list === 'open' ? 'closed' : 'open')}
+          aria-expanded={list === 'open'}
+          className="flex w-full items-center justify-between rounded-lg px-3 py-1 text-left text-ivory"
+        >
+          <span className="font-display text-[1.5rem] font-medium tracking-[-0.01em]">Your Courses</span>
+          {list === 'open' ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
+        </button>
 
-        {courses === null || courses === undefined ? (
+        {list === 'closed' ? null : courses === null || courses === undefined ? (
           <div className="mt-3 space-y-2 px-1" aria-busy="true" aria-label="Loading your courses">
             {[0, 1, 2].map((i) => (
               <span
@@ -129,9 +162,9 @@ export function GlobalSidebar() {
             ))}
           </div>
         ) : courses.length === 0 ? (
-          <p className="mt-2 px-3 text-[0.86rem] text-ivory/70">No courses yet.</p>
+          <p className="mt-3 px-3 text-[0.92rem] text-ivory/70">No courses yet.</p>
         ) : (
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-3 space-y-1.5">
             {courses.map((course) => (
               <CourseNav
                 key={course.id}
@@ -151,13 +184,15 @@ export function GlobalSidebar() {
           </ul>
         )}
 
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="mt-3 flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[0.92rem] text-ivory/[0.88] hover:bg-ivory/[0.08] hover:text-ivory"
-        >
-          <PlusIcon size={19} /> Add Course
-        </button>
+        {list === 'open' && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="mt-3 flex w-full items-center gap-[18px] rounded-[12px] px-[18px] py-2.5 text-[1rem] text-ivory/[0.85] hover:bg-ivory/[0.08] hover:text-ivory"
+          >
+            <PlusIcon size={21} /> Add Course
+          </button>
+        )}
       </div>
 
       {adding && (
@@ -194,7 +229,6 @@ function CourseNav({
 }) {
   const academy = useAcademy()
   const where = useLocation()
-  const art = useCourseArt()
   const detail = academy?.details[course.id]
   const here = where.courseId === course.id
   const base = `/courses/${course.id}`
@@ -217,17 +251,10 @@ function CourseNav({
           aria-current={here && where.section === 'overview' ? 'page' : undefined}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1.5 no-underline"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={art.thumb(course.id)}
-            alt=""
-            className="size-[46px] shrink-0 rounded-[9px] object-cover ring-1 ring-ivory/15"
-          />
+          <CourseGlyph course={course} size={42} tone="mist" />
           <span className="min-w-0">
-            <span className="block truncate font-display text-[1.02rem] font-semibold leading-tight text-ivory">
-              {title}
-            </span>
-            {course.code && <span className="block truncate text-[0.8rem] text-ivory/75">{course.name}</span>}
+            <span className="block truncate text-[1.1rem] font-medium leading-tight text-ivory">{title}</span>
+            {course.code && <span className="block truncate text-[0.88rem] text-ivory/80">{course.name}</span>}
           </span>
         </Link>
         <button
@@ -237,7 +264,7 @@ function CourseNav({
           aria-label={`${open ? 'Close' : 'Open'} ${title}`}
           className="mr-1.5 grid size-8 shrink-0 place-items-center rounded-lg text-ivory/80 hover:bg-ivory/[0.1] hover:text-ivory"
         >
-          {open ? <ChevronDownIcon size={17} /> : <ChevronRightIcon size={17} />}
+          {open ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
         </button>
       </div>
 
@@ -372,16 +399,29 @@ function Dot() {
 }
 
 /** The folded sidebar: the three places and the courses as icons, then the parts of the course on screen. */
-export function SidebarRail() {
+export function SidebarRail({ onExpand }: { onExpand: () => void }) {
   const academy = useAcademy()
   const where = useLocation()
-  const art = useCourseArt()
   const item = (active: boolean) =>
     `grid size-11 place-items-center rounded-xl transition-colors ${
       active ? 'bg-ivory/[0.18] text-ivory' : 'text-ivory/80 hover:bg-ivory/[0.08] hover:text-ivory'
     }`
   return (
-    <div className="flex h-full flex-col items-center gap-1.5 overflow-y-auto py-4 [scrollbar-width:none]">
+    <div className="flex h-full flex-col items-center gap-1.5 overflow-y-auto pb-4 pt-[17px] [scrollbar-width:none]">
+      <Link href="/dashboard" aria-label="Lyceo, My Academy" title="Lyceo" className="rounded-lg text-[#e9dcae]">
+        <LaurelMark size={38} />
+      </Link>
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label="Expand the sidebar"
+        aria-expanded={false}
+        aria-controls="app-sidebar"
+        title="Expand the sidebar"
+        className="mb-2 mt-1 grid size-9 place-items-center rounded-lg text-ivory/55 transition-colors hover:bg-ivory/[0.08] hover:text-ivory"
+      >
+        <SidebarIcon size={19} />
+      </button>
       {GLOBAL_PLACES.map((place) => {
         const Icon = place.icon
         const active = place.match(where.path)
@@ -409,10 +449,9 @@ export function SidebarRail() {
             title={title}
             aria-label={title}
             aria-current={here && where.section === 'overview' ? 'page' : undefined}
-            className={`rounded-[11px] p-[3px] ${here ? 'ring-2 ring-gold' : 'hover:ring-1 hover:ring-ivory/40'}`}
+            className={`rounded-[12px] p-[3px] ${here ? 'ring-2 ring-gold' : 'hover:ring-1 hover:ring-ivory/40'}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={art.thumb(course.id)} alt="" className="size-10 rounded-[8px] object-cover" />
+            <CourseGlyph course={course} size={40} tone="mist" />
           </Link>
         )
       })}
@@ -441,7 +480,13 @@ export function SidebarRail() {
   )
 }
 
-function AddCourseDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (course: AcademyCourse) => void }) {
+export function AddCourseDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void
+  onSaved: (course: AcademyCourse) => void
+}) {
   useEffect(() => {
     const escape = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', escape)

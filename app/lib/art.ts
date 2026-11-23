@@ -43,7 +43,6 @@ export const LANDING = {
   lyceum: `${BASE}/landing/04_lyceum_landscape.webp`,
 } as const
 
-export const TOPBAR_SCENE = `${BASE}/derived/topbar-valley.webp`
 /** Where the hero's picture moves: red for leaves in the breeze, green for the drifting sky. */
 export const HERO_MOTION = `${BASE}/derived/hero-motion.webp`
 

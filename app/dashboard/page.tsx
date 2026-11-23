@@ -9,17 +9,25 @@ import { Deadlines } from '../components/academy/Deadlines'
 import { plural } from '../components/academy/format'
 import { LearningProfile } from '../components/academy/LearningProfile'
 import { LessonRows } from '../components/academy/LessonRows'
+import { MyAcademyBoard } from '../components/academy/MyAcademyBoard'
 import { SetupNotice } from '../components/academy/SetupNotice'
 import { TodayPlan } from '../components/academy/TodayPlan'
 import { whenLabel, type AcademySnapshot } from '../lib/academy'
 import { clockQuery } from '../lib/clock'
+import { useShell } from '../components/shell/Shell'
 import { Closure } from '../components/study/Closure'
 import { ApiError, getJSON, supabase } from '../lib/supabase'
 
 type Problem = { setup: boolean; message: string }
 
-/** My Academy: what to study today and why, what's due, and how each course is going. */
+/** My Academy. Inside the new shell it is the designed board; where the shell is off, the page as it was. */
 export default function MyAcademy() {
+  const shell = useShell()
+  return shell ? <MyAcademyBoard /> : <ClassicAcademy />
+}
+
+/** My Academy as it was: what to study today and why, what's due, and how each course is going. */
+function ClassicAcademy() {
   const user = useRequiredUser()
   const [snap, setSnap] = useState<AcademySnapshot | null>(null)
   const [problem, setProblem] = useState<Problem | null>(null)

@@ -8,7 +8,8 @@ import { useEffect, useRef } from 'react'
 // motion or where WebGL isn't available: they keep the still picture.
 //
 // Three small pictures, made from the hero's own (see the comments in the shader), say what moves:
-//   motion  red: how much a place sways in the breeze; green: how open the sky is there to passing clouds
+//   motion  red: how much a place sways in the breeze (most at a branch's free end, nothing where it is held, and
+//           level across each leaf so the leaf moves whole); green: how open the sky is there to passing clouds
 //   clouds  the clouds on their own, as a belt as wide as the picture that goes round: the upper half is what each
 //           cloud adds over an ordinary blue, the lower half how opaque it is. Besides the picture's own clouds it
 //           holds more of them where no open sky shows, waiting their turn
@@ -17,8 +18,8 @@ import { useEffect, useRef } from 'react'
 /** Both the image and the canvas show the picture this much larger, so swaying leaves never pull in its edge. */
 const OVERSCAN = 1.02
 const FRAME_MS = 1000 / 30
-/** How fast the clouds cross, in the picture's own pixels a second: a cloud's width in some twenty seconds. */
-const CLOUD_SPEED = 9
+/** How fast the clouds cross, in the picture's own pixels a second: a cloud's width in half a minute. */
+const CLOUD_SPEED = 6
 /** Seconds the clouds take to get under way. */
 const CLOUD_START = 1.5
 
@@ -57,23 +58,35 @@ void main() {
   vec2 at = (uv - 0.5) * cover + 0.5;
   vec2 move = texture2D(motion, at).rg;
 
-  // The breeze. A gust crosses the picture from the left every six seconds or so: it bends the foliage downwind and
-  // sets it swaying harder; between gusts it settles. Distances are in the picture's own pixels.
+  // The breeze, in the picture's own pixels. Everything here changes slowly from place to place, over hundreds of
+  // pixels: a plant then moves almost as one piece and bends where the map holds it. (Motion that differs from one
+  // leaf to the next squeezes and spreads the picture between them, and the leaves seem to swell and shrink like a
+  // wave passing through.) Now and then a gust comes through from the left, leans the foliage downwind and sets it
+  // swaying a little wider.
+  vec2 spot = at / pixel;
   float gust = clamp(
-    0.5 + 0.34 * sin(TURN * (at.x * 0.7 - time / 6.0)) + 0.22 * sin(TURN * (at.x * 0.3 + at.y * 0.45 - time / 9.5) + 1.7),
+    0.5 + 0.32 * sin(TURN * (spot.x / 4200.0 - time / 8.5)) +
+      0.22 * sin(TURN * (spot.x / 6400.0 + spot.y / 2300.0 - time / 13.7) + 1.7),
     0.0, 1.0);
-  float live = 0.32 + 0.68 * gust;
-  float branch = TURN * (at.x * 2.6 + at.y * 1.9);  // whole branches, together
-  float twig = TURN * (at.x * 11.0 - at.y * 7.0);   // sprays of leaves, each in its own time
+  float live = 0.55 + 0.45 * gust;
+  float slow = 1.5 * time + TURN * (spot.x / 5200.0 + spot.y / 1500.0);   // to and fro, every four seconds or so
+  float quick = 2.35 * time + TURN * (spot.y / 1100.0 - spot.x / 6000.0) + 1.3;
   vec2 sway = vec2(
-    sin(time * 2.8 + branch) + 0.55 * sin(time * 4.4 + twig),
-    0.35 * sin(time * 2.27 + branch * 1.3 + 2.0) + 0.3 * sin(time * 3.86 + twig * 1.2)
+    sin(slow) + 0.35 * sin(quick),
+    0.26 * sin(1.305 * time + TURN * (spot.x / 2200.0 - spot.y / 2800.0) + 2.0) + 0.14 * sin(quick + 0.9)
   );
-  vec2 flutter = vec2(
-    sin(time * 8.1 + at.x * 150.0 + at.y * 90.0),
-    cos(time * 6.9 + at.x * 80.0 - at.y * 130.0)
-  );
-  vec2 shift = vec2(12.0, 1.44) * gust * gust + live * (9.0 * sway + 2.0 * flutter);
+  // Leaves stirring where they are: small turns about fixed spots (a turn has no swelling in it), under a pixel and
+  // a half, so that a plant isn't one stiff piece.
+  float a = spot.x / 41.0 + 0.5;
+  float b = spot.y / 37.0 + 1.2;
+  float c = spot.x / 29.0 - spot.y / 53.0 + 2.0;
+  float d = spot.x / 61.0 + spot.y / 31.0;
+  vec2 stir =
+    sin(1.9 * time + TURN * (spot.x / 900.0 - spot.y / 700.0)) * 34.0 *
+      vec2(sin(a) * cos(b) / 37.0, -cos(a) * sin(b) / 41.0) +
+    sin(2.7 * time + 1.0 + TURN * (spot.x / 1100.0 + spot.y / 800.0)) * 10.0 *
+      vec2(sin(c) * cos(d) / 31.0 - cos(c) * sin(d) / 53.0, -cos(c) * sin(d) / 29.0 - sin(c) * cos(d) / 61.0);
+  vec2 shift = vec2(8.0, 0.9) * gust * gust + live * (8.0 * sway + stir);
   vec2 leaf = at - move.r * shift * pixel * ease;
 
   vec3 color = texture2D(picture, leaf).rgb;
@@ -90,8 +103,6 @@ void main() {
     color += move.g * (light + thick * (BLUE - color + own) - own);
   }
 
-  // Sunlight through moving leaves.
-  color *= 1.0 + 0.05 * move.r * live * ease * sin(time * 3.4 + twig * 1.7);
   gl_FragColor = vec4(color, 1.0);
 }`
 

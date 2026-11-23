@@ -56,7 +56,9 @@ try {
   await sql.unsafe(`create schema if not exists private;
     create table if not exists private.schema_migrations (
       name text primary key, sha256 text not null, applied_at timestamptz not null default now());
-    revoke all on private.schema_migrations from public;`)
+    revoke all on private.schema_migrations from public;
+    -- Only the migration role (the owner) uses it. With RLS on and no policies, a grant alone couldn't expose it.
+    alter table private.schema_migrations enable row level security;`)
   const applied = new Map(
     (await sql`select name, sha256 from private.schema_migrations`).map((r) => [r.name, r.sha256]),
   )

@@ -1,4 +1,4 @@
-import { HERO_MOTION, LANDING } from '../../lib/art'
+import { HERO_SCENE, LANDING } from '../../lib/art'
 import { SignInButton } from '../SignInButton'
 import { HeroScene } from './HeroScene'
 import { Parallax } from './Parallax'
@@ -23,7 +23,7 @@ export function Hero() {
       className="relative h-svh max-h-[62.5vw] min-h-[520px] w-full overflow-hidden bg-[#efe6d4] [container-type:size]"
     >
       <Parallax speed={0.18} startAtTop className="absolute inset-0">
-        <HeroScene src={LANDING.hero} motion={HERO_MOTION} width={W} height={H} />
+        <HeroScene src={LANDING.hero} {...HERO_SCENE} width={W} height={H} />
       </Parallax>
       {/* The design's warm haze: light over the sky, strongest behind the words so they read. */}
       <div

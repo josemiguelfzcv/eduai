@@ -43,8 +43,12 @@ export const LANDING = {
   lyceum: `${BASE}/landing/04_lyceum_landscape.webp`,
 } as const
 
-/** Where the hero's picture moves: red for leaves in the breeze, green for the drifting sky. */
-export const HERO_MOTION = `${BASE}/derived/hero-motion.webp`
+/** What moves in the hero's picture (HeroScene says how each is read): its leaves, its clouds, its bare sky. */
+export const HERO_SCENE = {
+  motion: `${BASE}/derived/hero-motion.webp`,
+  clouds: `${BASE}/derived/hero-clouds.webp`,
+  sky: `${BASE}/derived/hero-sky.webp`,
+} as const
 
 type CourseLike = { id: number; name: string; code: string | null }
 

@@ -166,7 +166,50 @@ describe('server modules against the staging schema', { skip: skipReason }, () =
     const [row] =
       await db.admin`select attempt_mode, verdict, grader_version from public.session_events where id = ${event}`
     assert.deepEqual(row, { attempt_mode: 'independent', verdict: 'correct', grader_version: 'grade-v2.0/rules' })
+    // A second answer to the same question is refused as a conflict, not recorded twice.
+    await assert.rejects(
+      m.records.recordAttempt(a, session, 'q1', {
+        answer: '0.21',
+        verdict: 'correct',
+        grader: 'rule',
+        graderVersion: 'x',
+      }),
+      (err: { status: number }) => err.status === 409,
+    )
+
+    // Hints come from the key one at a time, and the answer after one is assisted.
+    await m.records.addItems(a, session, [
+      {
+        id: 'q2',
+        type: 'question',
+        skillId: skill,
+        difficulty: 1,
+        facet: 'procedural',
+        prompt: 'E(X) for a Bernoulli(0.3)?',
+        format: 'number',
+        key: { accepted: ['0.3'], solution: 'p', hints: ['A Bernoulli takes the values 0 and 1.'] },
+      },
+    ])
+    assert.deepEqual(await m.records.revealHint(a, session, 'q2'), {
+      hint: 'A Bernoulli takes the values 0 and 1.',
+      shown: 1,
+      remaining: 0,
+    })
+    assert.equal((await m.records.itemForGrading(a, session, 'q2')).hintsRevealed, 1)
+    await assert.rejects(m.records.revealHint(b, session, 'q2'), (err: { status: number }) => err.status === 404)
+    const hinted = await m.records.recordAttempt(a, session, 'q2', {
+      answer: '0.3',
+      verdict: 'correct',
+      grader: 'rule',
+      graderVersion: 'grade-v2.0/rules',
+    })
+    const [assisted] = await db.admin`select attempt_mode, hints_used from public.session_events where id = ${hinted}`
+    assert.deepEqual(assisted, { attempt_mode: 'assisted', hints_used: 1 })
+
+    await m.records.touchSession(a, session, 240)
     await m.records.finishSession(a, session, 'completed', { today: 'ok' }, 300)
+    const [closed] = await db.admin`select status, active_seconds from public.study_sessions where id = ${session}`
+    assert.deepEqual(closed, { status: 'completed', active_seconds: 300 })
     await assert.rejects(
       m.records.finishSession(a, session, 'completed', {}),
       (err: { status: number }) => err.status === 404,

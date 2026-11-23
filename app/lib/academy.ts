@@ -4,6 +4,9 @@
 
 import { normalizeLesson, type LearnerSummary } from './lesson'
 
+import type { SkillStateName } from './mastery'
+import type { SessionSummary } from './study'
+
 export type DeadlineKind = 'exam' | 'quiz' | 'assignment' | 'project' | 'other'
 
 export const DEADLINE_KINDS: { id: DeadlineKind; label: string }[] = [
@@ -97,8 +100,40 @@ export type CourseSummary = AcademyCourse & {
   nextDeadline: DatedDeadline | null
 }
 
+/** The closure of the latest Quick Check, for "Since last time". */
+export type LastSession = {
+  sessionId: number
+  status: 'active' | 'completed' | 'stopped'
+  courseName: string | null
+  lastActiveAt: string
+  summary: SessionSummary
+}
+
+/** A skill of a course with its mastery state, for the course page. */
+export type IdeaSummary = {
+  id: number
+  name: string
+  objective: string | null
+  state: SkillStateName
+  label: string
+  reason: string
+  next: string | null
+}
+
+export type MaterialSummary = {
+  id: number
+  title: string
+  status: string
+  failure: string | null
+  createdAt: string
+  ideas: number
+}
+
 export type AcademySnapshot = {
   today: string
+  /** True where the learning loop (private materials, skill maps, Quick Checks) is on: staging today. */
+  learningLoop?: boolean
+  sinceLastTime?: LastSession | null
   plan: StudyAction[]
   /** Not completed, from three days ago onward. */
   deadlines: DatedDeadline[]
@@ -110,6 +145,9 @@ export type AcademySnapshot = {
 
 export type CourseDetail = {
   today: string
+  learningLoop?: boolean
+  ideas?: IdeaSummary[]
+  materials?: MaterialSummary[]
   course: CourseSummary
   plan: StudyAction[]
   lessons: LessonProgress[]

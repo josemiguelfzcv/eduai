@@ -16,6 +16,9 @@ import {
 } from '../academy'
 import { HttpError } from './auth'
 import { computeLearner, summarizeLearner, type EventRow, type ProfileRow } from './learner'
+import { STATE_LABEL } from '../mastery'
+import { learningActions, materialInfos, sessionAnswers, summaryOf, type Learning } from './learning-data'
+import type { DatedDeadline, IdeaSummary, LastSession, MaterialSummary } from '../academy'
 
 export const SETUP_MESSAGE =
   'My Academy needs a one-time database update. Run supabase/migrations/0001_my_academy.sql in the Supabase SQL editor.'
@@ -151,13 +154,50 @@ function derive(data: AcademyData, today: string) {
   return { lessons, deadlines, courses }
 }
 
-export function buildSnapshot(data: AcademyData, today: string): AcademySnapshot {
+/** The learning loop's part of My Academy, when it's on. */
+export type Loop = { learning: Learning; now: Date }
+
+function loopInputs(data: AcademyData, deadlines: DatedDeadline[], loop?: Loop) {
+  if (!loop) return {}
+  const names = new Map(data.courses.map((c) => [c.id, c.name]))
+  return {
+    extra: learningActions(loop.learning, names, deadlines, loop.now),
+    coursesWithMaterial: new Set(
+      loop.learning.materials
+        .filter((m) => m.academy_course_id !== null && m.status !== 'failed')
+        .map((m) => m.academy_course_id!),
+    ),
+    uploadPath: '/materials/new',
+  }
+}
+
+/** The most recent Quick Check with an answer in the last 7 days, and its closure. */
+function lastSession(data: AcademyData, loop: Loop): LastSession | null {
+  const l = loop.learning
+  const names = new Map(data.courses.map((c) => [c.id, c.name]))
+  const week = loop.now.getTime() - 7 * 86_400_000
+  const recent = l.sessions.find(
+    (s) => new Date(s.last_active_at).getTime() >= week && sessionAnswers(l, s.id).some((a) => a.final),
+  )
+  if (!recent) return null
+  return {
+    sessionId: recent.id,
+    status: recent.status,
+    courseName: recent.academy_course_id === null ? null : (names.get(recent.academy_course_id) ?? null),
+    lastActiveAt: recent.last_active_at,
+    summary: summaryOf(l, recent, names, recent.status === 'completed'),
+  }
+}
+
+export function buildSnapshot(data: AcademyData, today: string, loop?: Loop): AcademySnapshot {
   const { lessons, deadlines, courses } = derive(data, today)
   const known = new Set(data.courses.map((c) => c.id))
   const learner = computeLearner(data.profile, data.events, data.lessonRows)
   return {
     today,
-    plan: planToday({ today, courses: data.courses, deadlines, lessons }),
+    learningLoop: !!loop,
+    sinceLastTime: loop ? lastSession(data, loop) : null,
+    plan: planToday({ today, courses: data.courses, deadlines, lessons, ...loopInputs(data, deadlines, loop) }),
     deadlines: deadlines.filter((d) => !d.completedAt && d.daysLeft >= -3),
     courses,
     unsorted: lessons.filter((l) => (l.courseId === null || !known.has(l.courseId)) && l.status !== 'not-ready'),
@@ -165,17 +205,51 @@ export function buildSnapshot(data: AcademyData, today: string): AcademySnapshot
   }
 }
 
-export function buildCourseDetail(data: AcademyData, courseId: number, today: string): CourseDetail {
+export function buildCourseDetail(data: AcademyData, courseId: number, today: string, loop?: Loop): CourseDetail {
   const { lessons, deadlines, courses } = derive(data, today)
   const course = courses.find((c) => c.id === courseId)
   if (!course) throw new HttpError(404, 'That course does not exist or is not yours.')
   const own = lessons.filter((l) => l.courseId === courseId)
   const ownDeadlines = deadlines.filter((d) => d.courseId === courseId)
+  const inputs = loopInputs(data, ownDeadlines, loop)
+  let ideas: IdeaSummary[] | undefined
+  let materials: MaterialSummary[] | undefined
+  if (loop) {
+    const l = loop.learning
+    ideas = l.active
+      .filter((s) => s.academy_course_id === courseId)
+      .map((s) => {
+        const st = l.states.get(s.id)!
+        return {
+          id: s.id,
+          name: s.name,
+          objective: s.objective,
+          state: st.state,
+          label: STATE_LABEL[st.state],
+          reason: st.reason,
+          next: st.next,
+        }
+      })
+    const counts = new Map(materialInfos(l).map((m) => [m.id, m.skillIds.length]))
+    materials = l.materials
+      .filter((m) => m.academy_course_id === courseId)
+      .map((m) => ({
+        id: m.id,
+        title: m.title,
+        status: m.status,
+        failure: m.failure,
+        createdAt: m.created_at,
+        ideas: counts.get(m.id) ?? 0,
+      }))
+  }
   return {
     today,
+    learningLoop: !!loop,
+    ideas,
+    materials,
     course,
     plan: planToday(
-      { today, courses: data.courses, deadlines: ownDeadlines, lessons: own },
+      { today, courses: data.courses, deadlines: ownDeadlines, lessons: own, ...inputs },
       { maxActions: 3, minuteBudget: 60 },
     ).filter((a) => a.courseId === courseId),
     lessons: own,

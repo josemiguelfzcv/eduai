@@ -11,7 +11,9 @@ import { LearningProfile } from '../components/academy/LearningProfile'
 import { LessonRows } from '../components/academy/LessonRows'
 import { SetupNotice } from '../components/academy/SetupNotice'
 import { TodayPlan } from '../components/academy/TodayPlan'
-import { localToday, whenLabel, type AcademySnapshot } from '../lib/academy'
+import { whenLabel, type AcademySnapshot } from '../lib/academy'
+import { clockQuery } from '../lib/clock'
+import { Closure } from '../components/study/Closure'
 import { ApiError, getJSON, supabase } from '../lib/supabase'
 
 type Problem = { setup: boolean; message: string }
@@ -25,7 +27,7 @@ export default function MyAcademy() {
 
   const load = useCallback(async () => {
     try {
-      const data = await getJSON<AcademySnapshot>(`/api/academy?today=${localToday()}`)
+      const data = await getJSON<AcademySnapshot>(`/api/academy?${clockQuery()}`)
       setSnap(data)
       setProblem(null)
     } catch (e) {
@@ -71,6 +73,9 @@ export default function MyAcademy() {
   const minutes = snap.plan.reduce((n, a) => n + a.minutes, 0)
   const next = snap.deadlines.find((d) => d.daysLeft >= 0)
   const isNew = snap.courses.length === 0 && snap.unsorted.length === 0
+  const uploadHref = snap.learningLoop ? '/materials/new' : '/upload'
+  const uploadLabel = snap.learningLoop ? 'Add material' : 'New lesson'
+  const last = snap.sinceLastTime
 
   return (
     <AppShell wide>
@@ -96,8 +101,8 @@ export default function MyAcademy() {
           <button type="button" className="btn btn-quiet" onClick={() => setAddingCourse(true)}>
             Add course
           </button>
-          <Link href="/upload" className="btn btn-primary no-underline">
-            New lesson
+          <Link href={uploadHref} className="btn btn-primary no-underline">
+            {uploadLabel}
           </Link>
         </div>
       </header>
@@ -117,6 +122,33 @@ export default function MyAcademy() {
       {/* One column on phones, ordered today, upcoming, courses, unfiled, profile; two columns from lg. */}
       <div className="mt-10 flex flex-col gap-12 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-14">
         <div className="contents lg:block lg:min-w-0 lg:space-y-14">
+          {last && (
+            <section aria-labelledby="last-title" className="order-1">
+              <h2 id="last-title" className="text-[1.5rem]">
+                Since last time
+              </h2>
+              <div className="panel mt-4 p-5 sm:p-6">
+                <p className="text-[0.88rem] text-ink-soft">
+                  Quick Check{last.courseName ? ` · ${last.courseName}` : ''} ·{' '}
+                  {new Date(last.lastActiveAt).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </p>
+                <div className="mt-2">
+                  <Closure summary={last.summary} compact />
+                </div>
+                <Link
+                  href={`/sessions/${last.sessionId}`}
+                  className="mt-3 inline-block text-forest underline underline-offset-4"
+                >
+                  {last.status === 'active' ? 'Pick up where you stopped' : 'See the whole closure'}
+                </Link>
+              </div>
+            </section>
+          )}
+
           <section aria-labelledby="today-title" className="order-1">
             <h2 id="today-title" className="text-[1.8rem]">
               What to study today
@@ -134,8 +166,8 @@ export default function MyAcademy() {
                       ? `${next.title} for ${next.courseName} is ${whenLabel(next.daysLeft)}. Upload the material it covers and Theo will turn it into a lesson.`
                       : 'Upload slides from your next class, or add an upcoming exam, and Theo will plan around it.'}
                   </p>
-                  <Link href="/upload" className="btn btn-quiet mt-4 no-underline">
-                    New lesson
+                  <Link href={uploadHref} className="btn btn-quiet mt-4 no-underline">
+                    {uploadLabel}
                   </Link>
                 </div>
               )}

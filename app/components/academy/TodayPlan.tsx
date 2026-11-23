@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { StudyAction } from '../../lib/academy'
 import { postJSON } from '../../lib/supabase'
+import { startQuickCheck } from '../study/client'
 
 const BUTTON: Record<StudyAction['kind'], string> = {
   review: 'Start review',
@@ -29,6 +30,11 @@ export function TodayPlan({ plan, showCourse = true }: { plan: StudyAction[]; sh
     setBusy(action.key)
     setError(null)
     try {
+      if (action.session) {
+        const sessionId = await startQuickCheck(action.session)
+        router.push(`/sessions/${sessionId}`)
+        return
+      }
       const { courseId } = await postJSON<{ courseId: number }>('/api/review', { courseId: action.lessonId })
       router.push(`/class/${courseId}`)
     } catch (e) {
@@ -76,7 +82,7 @@ export function TodayPlan({ plan, showCourse = true }: { plan: StudyAction[]; sh
                   >
                     {busy === a.key ? (
                       <>
-                        <span className="spinner" /> Writing review
+                        <span className="spinner" /> {a.session ? 'Writing questions' : 'Writing review'}
                       </>
                     ) : (
                       BUTTON[a.kind]

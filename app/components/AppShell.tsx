@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Logo } from './Logo'
+import { useFeatures } from './study/client'
 
 /** Returns the signed-in user, sending visitors without a session back to the landing page. */
 export function useRequiredUser() {
@@ -37,10 +38,18 @@ const NAV = [
   { href: '/upload', label: 'New lesson' },
   { href: '/profile', label: 'Profile' },
 ]
+// Where the learning loop is on, students add material (mapped into ideas) instead of making a lesson.
+const LOOP_NAV = [
+  { href: '/dashboard', label: 'My Academy' },
+  { href: '/materials/new', label: 'Add material' },
+  { href: '/profile', label: 'Profile' },
+]
 
 export function AppShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   const pathname = usePathname()
   const width = wide ? 'max-w-6xl' : 'max-w-4xl'
+  const features = useFeatures()
+  const nav = features?.learningLoop ? LOOP_NAV : NAV
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -51,7 +60,9 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
   const current = (href: string) =>
     pathname === href
       ? 'page'
-      : href === '/dashboard' && (pathname.startsWith('/courses/') || pathname.startsWith('/class/'))
+      : href === '/dashboard' &&
+          ['/courses/', '/class/', '/materials/', '/sessions/'].some((p) => pathname.startsWith(p)) &&
+          pathname !== '/materials/new'
         ? 'true'
         : undefined
 
@@ -61,7 +72,7 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
         <div className={`mx-auto flex items-center justify-between gap-4 px-5 py-4 ${width}`}>
           <Logo href="/dashboard" />
           <nav aria-label="Main" className="hidden items-center gap-1 text-[0.95rem] sm:flex">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -84,7 +95,7 @@ export function AppShell({ children, wide = false }: { children: React.ReactNode
         {/* On phones the links get their own row of tabs. */}
         <nav aria-label="Main" className="border-t border-line sm:hidden">
           <div className="flex px-2">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

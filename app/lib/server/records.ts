@@ -24,6 +24,7 @@ async function call<T>(run: () => Promise<T>): Promise<T> {
   } catch (err) {
     if (pgCode(err) === '42501') throw new HttpError(404, 'That does not exist or is not yours.')
     if (pgCode(err) === '55000') throw new HttpError(409, 'That session has already ended.')
+    if (pgCode(err) === '23505') throw new HttpError(409, 'That question was already answered.')
     throw err
   }
 }
@@ -46,6 +47,22 @@ export async function forgetMaterial(userId: string, materialId: number) {
   await call(() => db()`select private.material_forget(${userId}::uuid, ${materialId}::bigint)`)
 }
 
+/** Where each page starts in the material's text. */
+export type PageStart = { n: number; start: number }
+
+/** Saves the text read from an accepted file, one entry per page in `pages`. Status becomes 'extracted'. */
+export async function saveMaterialText(userId: string, materialId: number, text: string, pages: PageStart[]) {
+  await call(async () => {
+    const sql = db()
+    await sql`select private.material_save_text(${userId}::uuid, ${materialId}::bigint, ${text}, ${sql.json(pages as never)})`
+  })
+}
+
+/** The skill map of the material was written. Status becomes 'mapped'. */
+export async function markMaterialMapped(userId: string, materialId: number) {
+  await call(() => db()`select private.material_mark_mapped(${userId}::uuid, ${materialId}::bigint)`)
+}
+
 // Study sessions ----------------------------------------------------------------------------------------------
 
 export type ItemFormat = 'number' | 'expression' | 'choice' | 'short_text'
@@ -63,6 +80,10 @@ export type PublicItem = {
   board?: string[]
   /** For explanations: where in the student's material the explanation comes from. */
   sources?: { materialId?: number; lessonId?: number; pages?: number[]; quote?: string }[]
+  /** For teaching items: the question whose wrong or partial answer they follow up. */
+  follows?: string
+  /** For teaching items: 1 or 2, the round of explanation and practice. */
+  round?: 1 | 2
 }
 
 /** What grading needs. Stored only in private.item_keys. */
@@ -75,6 +96,8 @@ export type ItemKey = {
   /** Points a complete answer shows. Required unless marked optional; partial credit needs at least one required. */
   rubric?: { point: string; required?: boolean }[]
   misconceptions?: { answer: string; tag: string; verdict?: 'partial' | 'incorrect' }[]
+  /** Shown one at a time, and counted, by private.reveal_hint. */
+  hints?: string[]
   solution: string
 }
 
@@ -103,6 +126,8 @@ export function publicItem(item: NewItem): PublicItem {
       pages: s.pages,
       quote: s.quote,
     }))
+  if (item.follows) out.follows = String(item.follows)
+  if (item.round) out.round = item.round
   return out
 }
 
@@ -122,14 +147,14 @@ export async function startSession(
 
 export async function addItems(userId: string, sessionId: number, items: NewItem[]) {
   const payload = items.map((item) => {
-    const { prompt, format, choices, board, sources } = publicItem(item)
+    const { prompt, format, choices, board, sources, follows, round } = publicItem(item)
     return {
       id: item.id,
       type: item.type,
       skill_id: item.skillId,
       difficulty: item.difficulty,
       facet: item.facet,
-      public: { prompt, format, choices, board, sources },
+      public: { prompt, format, choices, board, sources, follows, round },
       key: item.type === 'question' ? item.key : null,
     }
   })
@@ -151,9 +176,32 @@ export async function itemForGrading(userId: string, sessionId: number, itemId: 
       facet: row.facet as PublicItem['facet'],
       public: row.public as Record<string, unknown>,
       key: row.key as ItemKey,
+      /** A final answer exists (anything but a first unclear one). */
       answered: row.answered as boolean,
+      unclearAnswers: Number(row.unclear_answers),
+      hintsRevealed: Number(row.hints_revealed),
     }
   })
+}
+
+/** Shows the next hint of an unanswered question and counts it. `hint` is null when none is left. */
+export async function revealHint(userId: string, sessionId: number, itemId: string) {
+  return call(async () => {
+    const [row] = await db()`select * from private.reveal_hint(${userId}::uuid, ${sessionId}::bigint, ${itemId})`
+    return {
+      hint: (row?.hint as string | null) ?? null,
+      shown: Number(row?.shown ?? 0),
+      remaining: Number(row?.remaining ?? 0),
+    }
+  })
+}
+
+/** Records the session's active time so far (never lowers it). */
+export async function touchSession(userId: string, sessionId: number, activeSeconds: number) {
+  await call(
+    () =>
+      db()`select private.session_touch(${userId}::uuid, ${sessionId}::bigint, ${Math.round(activeSeconds)}::integer)`,
+  )
 }
 
 export type AttemptFacts = {

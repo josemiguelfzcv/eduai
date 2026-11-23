@@ -12,6 +12,11 @@ const BUTTON: Record<StudyAction['kind'], string> = {
   continue: 'Continue',
   start: 'Start lesson',
   'add-material': 'Add material',
+  resume: 'Resume',
+  confirm: 'Start',
+  practice: 'Start',
+  'first-check': 'Start',
+  'review-skills': 'Start',
 }
 
 /** The ordered steps of "What to study today", each with its reason and a button that goes straight to it. */

@@ -59,7 +59,18 @@ export type LessonProgress = {
   status: 'not-ready' | 'new' | 'in-progress' | 'done'
 }
 
-export type StudyActionKind = 'review' | 'open-review' | 'continue' | 'start' | 'add-material'
+export type StudyActionKind =
+  | 'review'
+  | 'open-review'
+  | 'continue'
+  | 'start'
+  | 'add-material'
+  // From the learning loop: a paused Quick Check, and skills to confirm, practice, check for the first time or review.
+  | 'resume'
+  | 'confirm'
+  | 'practice'
+  | 'first-check'
+  | 'review-skills'
 
 export type StudyAction = {
   key: string
@@ -71,8 +82,10 @@ export type StudyAction = {
   courseName: string | null
   /** For 'review': the lesson to build a review from. Otherwise the lesson the button opens. */
   lessonId: number | null
-  /** Where the button goes. Null for 'review', which first creates the review lesson. */
+  /** Where the button goes. Null for 'review', which first creates the review lesson, and for Quick Checks. */
   href: string | null
+  /** For actions that start a Quick Check: its course and the skills it focuses on. */
+  session?: { courseId: number; skillIds: number[] }
   priority: number
 }
 
@@ -293,12 +306,23 @@ const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  * Every step carries a plain-language reason built from the same signals.
  */
 export function planToday(
-  input: { today: string; courses: AcademyCourse[]; deadlines: DatedDeadline[]; lessons: LessonProgress[] },
+  input: {
+    today: string
+    courses: AcademyCourse[]
+    deadlines: DatedDeadline[]
+    lessons: LessonProgress[]
+    /** Candidates from the learning loop (next-step.ts), already weighted. */
+    extra?: StudyAction[]
+    /** Courses that have uploaded material, so they don't need an 'add material' step. */
+    coursesWithMaterial?: Set<number>
+    /** Where 'add material' goes. */
+    uploadPath?: string
+  },
   { maxActions = 3, minuteBudget = 45 }: { maxActions?: number; minuteBudget?: number } = {},
 ): StudyAction[] {
   const { today, courses, deadlines, lessons } = input
   const courseName = new Map(courses.map((c) => [c.id, c.name]))
-  const candidates: StudyAction[] = []
+  const candidates: StudyAction[] = [...(input.extra ?? [])]
 
   const deadlineReason = (pressure: ReturnType<typeof coursePressure>) =>
     pressure.deadline ? `${sentence(pressure.deadline.title)} is ${whenLabel(pressure.deadline.daysLeft)}.` : ''
@@ -370,6 +394,7 @@ export function planToday(
     const pressure = coursePressure(c.id, deadlines)
     if (!pressure.deadline || pressure.deadline.daysLeft > 14) continue
     if (lessons.some((l) => l.courseId === c.id && l.status !== 'not-ready')) continue
+    if (input.coursesWithMaterial?.has(c.id)) continue
     candidates.push({
       key: `add-material-${c.id}`,
       kind: 'add-material',
@@ -379,7 +404,7 @@ export function planToday(
       courseId: c.id,
       courseName: c.name,
       lessonId: null,
-      href: `/upload?course=${c.id}`,
+      href: `${input.uploadPath ?? '/upload'}?course=${c.id}`,
       priority: 0.85 * (1 + 2 * pressure.boost),
     })
   }

@@ -378,7 +378,8 @@ describe('staging schema security', { skip: skipReason }, () => {
       await addQuestion(session, 'q2')
       await addQuestion(session, 'q3')
       const first = await attempt(session, 'q1', { verdict: 'incorrect', answer: '0.5', error_tag: 'divided by P(A)' })
-      const retry = await attempt(session, 'q1', { verdict: 'correct' })
+      // A question takes one real answer: a retry, or the same request sent twice, is refused.
+      assert.equal(await errorCode(() => attempt(session, 'q1', { verdict: 'correct' })), '23505')
       const practice = await attempt(session, 'q2', {
         explained_before: true,
         teaching_round: 1,
@@ -387,12 +388,12 @@ describe('staging schema security', { skip: skipReason }, () => {
       })
       const hinted = await attempt(session, 'q3', { hints_used: 1 })
       const rows = await db.admin`select id, attempt_mode, novel, teaching_round from public.session_events
-        where id in (${first}, ${retry}, ${practice}, ${hinted}) order by id`
+        where id in (${first}, ${practice}, ${hinted}) order by id`
       assert.deepEqual(
         rows.map((r) => r.attempt_mode),
-        ['independent', 'assisted', 'assisted', 'assisted'],
+        ['independent', 'assisted', 'assisted'],
       )
-      assert.equal(rows[1].novel, false)
+      assert.equal(rows[0].novel, true)
     })
 
     test('a practice round must follow an explanation, and can only follow an answer in the same session', async () => {
@@ -617,6 +618,18 @@ describe('staging schema security', { skip: skipReason }, () => {
         await errorCode(() => db.server`select private.material_accept_upload(${a}, ${m.id}, 1024)`),
         '42501',
       )
+      // The map can only be marked written once there is text, and only by its owner.
+      assert.equal(await errorCode(() => db.server`select private.material_mark_mapped(${a}, ${m.id})`), '42501')
+      const pages = json([
+        { n: 1, start: 0 },
+        { n: 2, start: 12 },
+      ])
+      await db.server`select private.material_save_text(${a}, ${m.id}, 'Page one.\n\nPage two.', ${pages})`
+      assert.equal(await errorCode(() => db.server`select private.material_mark_mapped(${b}, ${m.id})`), '42501')
+      await db.server`select private.material_mark_mapped(${a}, ${m.id})`
+      const [mapped] = await as(db, A(), (tx) => tx`select status, pages from public.materials where id = ${m.id}`)
+      assert.equal(mapped.status, 'mapped')
+      assert.equal(mapped.pages.length, 2)
       const [{ forgotten }] = await db.server`select private.material_forget(${a}, ${m.id}) as forgotten`
       assert.equal(forgotten, key)
     })
@@ -685,6 +698,108 @@ describe('staging schema security', { skip: skipReason }, () => {
         '42501',
         "a source can't be attached to another student's skill",
       )
+    })
+  })
+
+  describe('hints and unclear answers', () => {
+    const HINTED = { ...KEY, hints: ['Which event do you know happened?', 'Divide by P(B).'] }
+    async function addHinted(session: number, id: string) {
+      const items = [
+        {
+          id,
+          type: 'question',
+          skill_id: skillA,
+          difficulty: 2,
+          facet: 'procedural',
+          public: { prompt: 'P(A|B)?' },
+          key: HINTED,
+        },
+      ]
+      await db.server`select private.session_add_items(${a}, ${session}, ${json(items)})`
+    }
+    const reveal = async (session: number, item: string, user = a) => {
+      const [row] = await db.server`select * from private.reveal_hint(${user}, ${session}, ${item})`
+      return row
+    }
+
+    test('the server shows hints one at a time and counts them, whatever the caller reports later', async () => {
+      const session = await startSession()
+      await addHinted(session, 'h1')
+      assert.deepEqual({ ...(await reveal(session, 'h1')) }, { hint: HINTED.hints[0], shown: 1, remaining: 1 })
+      assert.deepEqual({ ...(await reveal(session, 'h1')) }, { hint: HINTED.hints[1], shown: 2, remaining: 0 })
+      assert.deepEqual({ ...(await reveal(session, 'h1')) }, { hint: null, shown: 2, remaining: 0 })
+      // The caller says no hint was used; the database knows better.
+      const event = await attempt(session, 'h1', { hints_used: 0 })
+      const [row] = await db.admin`select hints_used, attempt_mode from public.session_events where id = ${event}`
+      assert.deepEqual({ ...row }, { hints_used: 2, attempt_mode: 'assisted' })
+      // No hints for an answered question, and none for another student's.
+      assert.equal(await errorCode(() => reveal(session, 'h1')), '23505')
+      await addHinted(session, 'h2')
+      assert.equal(await errorCode(() => reveal(session, 'h2', b)), '42501')
+    })
+
+    test('hints never reach the browser before they are shown', async () => {
+      const session = await startSession()
+      await addHinted(session, 'h3')
+      const rows = await as(
+        db,
+        A(),
+        (tx) => tx`select items::text as items from public.study_sessions where id = ${session}`,
+      )
+      assert.ok(!rows[0].items.includes(HINTED.hints[0]))
+    })
+
+    test('an unclear answer reveals nothing and can be clarified once; the clarification can be independent', async () => {
+      const session = await startSession()
+      await addQuestion(session, 'u1')
+      const unclear = await attempt(session, 'u1', { verdict: 'unclear', answer: '0.25 or 0.5?' })
+      // The student can read the row, but it carries no solution, and the key isn't marked revealed.
+      const [mine] = await as(db, A(), (tx) => tx`select item from public.session_events where id = ${unclear}`)
+      assert.equal(mine.item.solution, undefined)
+      const [key] =
+        await db.admin`select revealed_at from private.item_keys where study_session_id = ${session} and item_id = 'u1'`
+      assert.equal(key.revealed_at, null)
+      const [state] =
+        await db.server`select answered, unclear_answers from private.session_item(${a}, ${session}, 'u1')`
+      assert.deepEqual({ ...state }, { answered: false, unclear_answers: 1 })
+
+      const clarified = await attempt(session, 'u1', { verdict: 'correct', answer: '0.25' })
+      const [row] = await db.admin`select attempt_mode, novel, item from public.session_events where id = ${clarified}`
+      assert.equal(row.attempt_mode, 'independent')
+      assert.equal(row.novel, false)
+      assert.equal(row.item.solution, KEY.solution)
+      assert.equal(await errorCode(() => attempt(session, 'u1', { verdict: 'correct' })), '23505')
+    })
+
+    test('a second unclear answer ends the question and shows the solution', async () => {
+      const session = await startSession()
+      await addQuestion(session, 'u2')
+      await attempt(session, 'u2', { verdict: 'unclear', answer: 'maybe A' })
+      const second = await attempt(session, 'u2', { verdict: 'unclear', answer: 'A or B' })
+      const [row] = await db.admin`select item from public.session_events where id = ${second}`
+      assert.equal(row.item.solution, KEY.solution)
+      const [state] = await db.server`select answered from private.session_item(${a}, ${session}, 'u2')`
+      assert.equal(state.answered, true)
+      assert.equal(await errorCode(() => attempt(session, 'u2', { verdict: 'correct' })), '23505')
+    })
+
+    test('two answers sent at the same time record one', async () => {
+      const session = await startSession()
+      await addQuestion(session, 'r1')
+      const results = await Promise.allSettled([attempt(session, 'r1', {}), attempt(session, 'r1', {})])
+      assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1)
+      const [{ n }] =
+        await db.admin`select count(*)::int as n from public.session_events where study_session_id = ${session}`
+      assert.equal(n, 1)
+    })
+
+    test('active time only goes up, and only for the student’s own active session', async () => {
+      const session = await startSession()
+      await db.server`select private.session_touch(${a}, ${session}, 300)`
+      await db.server`select private.session_touch(${a}, ${session}, 120)`
+      const [row] = await db.admin`select active_seconds from public.study_sessions where id = ${session}`
+      assert.equal(row.active_seconds, 300)
+      assert.equal(await errorCode(() => db.server`select private.session_touch(${b}, ${session}, 900)`), '42501')
     })
   })
 

@@ -34,8 +34,8 @@ const GUIDED_SKILLS = 3
  */
 export async function POST(req: NextRequest) {
   try {
-    requireLearningLoop()
     const { user, db } = await requireUser(req)
+    requireLearningLoop(user)
     const body = await req.json()
     const clock = clientClock(body)
     const courseId = await assertOwnCourse(db, user.id, body.courseId)

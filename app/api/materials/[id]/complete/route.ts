@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse, HttpError, requireUser } from '../../../../lib/server/auth'
 import { finishUpload, privateUploadsEnabled, readMaterialFile } from '../../../../lib/server/materials'
 import { readPdfPages } from '../../../../lib/server/material-map'
+import { loopAllowed } from '../../../../lib/server/learning-data'
 import { acceptUpload, rejectUpload, saveMaterialText } from '../../../../lib/server/records'
 
 export const maxDuration = 60
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest, context: Context) {
   try {
     if (!privateUploadsEnabled()) throw new HttpError(404, 'This part of Lyceo is not available yet.')
     const { user, db } = await requireUser(req)
+    if (!loopAllowed(user)) throw new HttpError(404, 'This part of Lyceo is not available yet.')
     const id = Number((await context.params).id)
     if (!Number.isSafeInteger(id)) throw new HttpError(404, 'That material does not exist.')
 

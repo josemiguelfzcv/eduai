@@ -8,8 +8,8 @@ type Context = { params: Promise<{ id: string }> }
 /** "Start studying": accepts the material's map as it is, including the ideas still waiting for a yes or no. */
 export async function POST(req: NextRequest, context: Context) {
   try {
-    requireLearningLoop()
     const { user, db } = await requireUser(req)
+    requireLearningLoop(user)
     const id = Number((await context.params).id)
     if (!Number.isSafeInteger(id)) throw new HttpError(404, 'That material does not exist.')
     const view = await materialView(db, id, user.id)

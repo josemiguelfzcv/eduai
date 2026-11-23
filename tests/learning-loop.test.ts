@@ -458,3 +458,22 @@ describe('the next step', () => {
     assert.equal(actions[0].href, '/sessions/4')
   })
 })
+
+describe('who the learning loop is open to', () => {
+  test('everyone where it is configured, or only the accounts on the list', async () => {
+    const { loopAllowed } = await import('../app/lib/server/learning-data')
+    const before = process.env.LYCEO_LEARNING_LOOP_EMAILS
+    try {
+      delete process.env.LYCEO_LEARNING_LOOP_EMAILS
+      assert.equal(loopAllowed({ email: 'anyone@example.com' }), true)
+      process.env.LYCEO_LEARNING_LOOP_EMAILS = ' Owner@Example.com, second@example.com '
+      assert.equal(loopAllowed({ email: 'owner@example.com' }), true)
+      assert.equal(loopAllowed({ email: 'someone@example.com' }), false)
+      assert.equal(loopAllowed({ email: null }), false)
+      assert.equal(loopAllowed(null), false)
+    } finally {
+      if (before === undefined) delete process.env.LYCEO_LEARNING_LOOP_EMAILS
+      else process.env.LYCEO_LEARNING_LOOP_EMAILS = before
+    }
+  })
+})

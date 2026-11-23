@@ -9,8 +9,8 @@ type Context = { params: Promise<{ id: string }> }
 /** Records the active time the browser measured (it pauses when the tab is hidden or the student is idle). */
 export async function POST(req: NextRequest, context: Context) {
   try {
-    requireLearningLoop()
     const { user } = await requireUser(req)
+    requireLearningLoop(user)
     const id = sessionId((await context.params).id)
     const body = await req.json()
     const seconds = Number(body.activeSeconds)

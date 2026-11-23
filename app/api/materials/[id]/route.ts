@@ -10,8 +10,8 @@ type Context = { params: Promise<{ id: string }> }
 /** A material with its skill map, as the student reviews it. */
 export async function GET(req: NextRequest, context: Context) {
   try {
-    requireLearningLoop()
     const { user, db } = await requireUser(req)
+    requireLearningLoop(user)
     const id = Number((await context.params).id)
     if (!Number.isSafeInteger(id)) throw new HttpError(404, 'That material does not exist.')
     return NextResponse.json(await materialView(db, id, user.id))

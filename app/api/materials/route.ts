@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { assertOwnCourse, rows, text } from '../../lib/server/academy'
 import { errorResponse, HttpError, requireUser } from '../../lib/server/auth'
 import { checkDeclaredFile, FILE_RULES, prepareUpload, privateUploadsEnabled } from '../../lib/server/materials'
+import { loopAllowed } from '../../lib/server/learning-data'
 
 /** At most this many uploads can be waiting to arrive at once, so nobody can stockpile upload links. */
 const MAX_PENDING = 10
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     if (!privateUploadsEnabled()) throw new HttpError(404, 'This part of Lyceo is not available yet.')
     const { user, db } = await requireUser(req)
+    if (!loopAllowed(user)) throw new HttpError(404, 'This part of Lyceo is not available yet.')
     const body = await req.json()
     const problem = checkDeclaredFile(body.contentType, body.bytes)
     if (problem) throw new HttpError(400, problem)

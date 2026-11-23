@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const tz = validTimeZone(new URL(req.url).searchParams.get('tz'))
     const [data, learning] = await Promise.all([
       loadAcademyData(db, user.id),
-      learningLoopEnabled() ? loadLearning(db, { tz, today }) : null,
+      learningLoopEnabled(user) ? loadLearning(db, { tz, today }) : null,
     ])
     return NextResponse.json(buildSnapshot(data, today, learning ? { learning, now: new Date() } : undefined))
   } catch (err) {

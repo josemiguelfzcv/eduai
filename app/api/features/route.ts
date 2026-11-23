@@ -6,9 +6,9 @@ import { serverRecordsEnabled } from '../../lib/server/records'
 /** Which parts of Lyceo this deployment runs, for a signed-in student's navigation. */
 export async function GET(req: NextRequest) {
   try {
-    await requireUser(req)
+    const { user } = await requireUser(req)
     // Account deletion needs the database function from migration 0004 and the server's cleanup of files.
-    return NextResponse.json({ learningLoop: learningLoopEnabled(), accountDeletion: serverRecordsEnabled() })
+    return NextResponse.json({ learningLoop: learningLoopEnabled(user), accountDeletion: serverRecordsEnabled() })
   } catch (err) {
     return errorResponse(err, 'Could not load the app settings.')
   }

@@ -13,13 +13,29 @@ import type { SkillContext } from './learning'
 // The learning loop's data, read with the student's own session (row-level security), and what it adds up to: each
 // skill's state, the next steps, a session as the student sees it, and its closure.
 
-/** On where both the private bucket and the server's database connection are configured: staging today. */
-export function learningLoopEnabled() {
-  return privateUploadsEnabled() && serverRecordsEnabled()
+/**
+ * Who the learning loop is open to. LYCEO_LEARNING_LOOP_EMAILS, a comma-separated list, limits it to those accounts
+ * (production starts with one); unset, it's open to everyone wherever it's configured (staging).
+ */
+export function loopAllowed(user: { email?: string | null } | null | undefined) {
+  const list = (process.env.LYCEO_LEARNING_LOOP_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  if (!list.length) return true
+  return !!user?.email && list.includes(user.email.toLowerCase())
 }
 
-export function requireLearningLoop() {
-  if (!learningLoopEnabled()) throw new HttpError(404, 'This part of Lyceo is not available yet.')
+/**
+ * On where both the private bucket and the server's database connection are configured (staging today), and, given
+ * a user, only if they're allowed. Without a user it answers for the deployment.
+ */
+export function learningLoopEnabled(user?: { email?: string | null } | null) {
+  return privateUploadsEnabled() && serverRecordsEnabled() && (user === undefined || loopAllowed(user))
+}
+
+export function requireLearningLoop(user: { email?: string | null }) {
+  if (!learningLoopEnabled(user)) throw new HttpError(404, 'This part of Lyceo is not available yet.')
 }
 
 type DbResult<T> = { data: T | null; error: { message: string; code?: string } | null }

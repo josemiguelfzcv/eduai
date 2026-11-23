@@ -25,8 +25,8 @@ type Context = { params: Promise<{ id: string }> }
  */
 export async function POST(req: NextRequest, context: Context) {
   try {
-    requireLearningLoop()
     const { user, db } = await requireUser(req)
+    requireLearningLoop(user)
     const id = sessionId((await context.params).id)
     const body = await req.json()
     const clock = clientClock(body)

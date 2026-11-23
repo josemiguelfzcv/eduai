@@ -7,8 +7,8 @@ type Context = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, context: Context) {
   try {
-    requireLearningLoop()
     const { user, db } = await requireUser(req)
+    requireLearningLoop(user)
     const id = sessionId((await context.params).id)
     return NextResponse.json(await sessionView(db, user.id, id, clientClock(new URL(req.url).searchParams)))
   } catch (err) {

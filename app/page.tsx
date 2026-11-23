@@ -1,5 +1,5 @@
 import { AcademySection } from './components/landing/AcademySection'
-import { FinalCTA, SiteFooter } from './components/landing/Closing'
+import { SiteFooter } from './components/landing/Closing'
 import { Hero } from './components/landing/Hero'
 import { LearningSection } from './components/landing/LearningSection'
 import { LyceumSection } from './components/landing/LyceumSection'
@@ -15,7 +15,6 @@ export default function Home() {
         <AcademySection />
         <LearningSection />
         <LyceumSection />
-        <FinalCTA />
       </main>
       <SiteFooter />
     </>

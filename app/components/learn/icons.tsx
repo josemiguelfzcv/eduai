@@ -198,6 +198,23 @@ export const PencilIcon = (p: IconProps) => (
     <path d="M4 20l1-4L15.5 5.5a2.1 2.1 0 0 1 3 3L8 19z M13.5 7.5l3 3" />
   </Icon>
 )
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4" />
+  </Icon>
+)
+export const BookmarkIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6.5 3.5h11v17L12 16.5l-5.5 4z" />
+  </Icon>
+)
+export const TargetIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="4.5" />
+    <path d="m12 12 7.5-7.5M16.5 4.5h3v3" />
+  </Icon>
+)
 export const RepeatIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" />

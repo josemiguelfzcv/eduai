@@ -14,8 +14,10 @@ export function SignInButton({
   signedInLabel = 'Open My Academy',
   icon = 'google',
   hideWhenSignedIn = false,
+  style,
 }: {
   className?: string
+  style?: React.CSSProperties
   label?: string
   signedInLabel?: string
   icon?: 'google' | 'arrow' | 'none'
@@ -31,7 +33,7 @@ export function SignInButton({
   if (signedIn) {
     if (hideWhenSignedIn) return null
     return (
-      <Link href="/dashboard" className={`${className} no-underline`}>
+      <Link href="/dashboard" className={`${className} no-underline`} style={style}>
         {signedInLabel}
         {icon === 'arrow' && <ArrowIcon />}
       </Link>
@@ -42,6 +44,7 @@ export function SignInButton({
     <button
       type="button"
       className={className}
+      style={style}
       disabled={busy}
       onClick={async () => {
         setBusy(true)

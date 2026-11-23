@@ -1,15 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '../learn/icons'
-import { LyceoWordmark } from '../learn/LaurelMark'
+import { LaurelMark } from '../learn/LaurelMark'
 import { SignInButton } from '../SignInButton'
 
-/**
- * The landing's navigation (desktop). Over the hero it's just the wordmark, the sections and Log in on the scene;
- * once the page scrolls it settles on a band of ivory.
- */
+// The landing's navigation, laid out like the approved hero (measured on its 1672px frame, so every size is in vw):
+// the wordmark at the left, Product, The Lyceum, Resources and About in the middle, Log in at the right. Over the
+// hero it sits on the scene; once the page scrolls it settles on a band of ivory.
+
+const v = (px: number) => `${((px / 1672) * 100).toFixed(3)}vw`
+
 export function SiteNav() {
   const [scrolled, setScrolled] = useState(false)
   const [menu, setMenu] = useState(false)
@@ -37,11 +38,13 @@ export function SiteNav() {
     }
   }, [menu])
 
+  const link = 'rounded-md text-[#283223] no-underline transition-colors hover:text-[#1d2f1a]'
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow] duration-300 ${
-        scrolled ? 'bg-[#f8f2e8]/90 shadow-[0_8px_30px_-22px_rgba(40,30,10,0.55)] backdrop-blur-md' : ''
+      className={`fixed inset-x-0 top-0 z-50 transition-[height,background-color,box-shadow] duration-300 ${
+        scrolled ? 'bg-[#f8f2e8]/92 shadow-[0_8px_30px_-22px_rgba(40,30,10,0.55)] backdrop-blur-md' : ''
       }`}
+      style={{ height: scrolled ? 76 : v(224) }}
     >
       <a
         href="#main"
@@ -49,59 +52,86 @@ export function SiteNav() {
       >
         Skip to content
       </a>
-      <div
-        className={`mx-auto grid max-w-[104rem] grid-cols-[1fr_auto_1fr] items-center px-[clamp(2rem,10vw,12rem)] transition-[height] duration-300 ${
-          scrolled ? 'h-[76px]' : 'h-[112px]'
-        }`}
+
+      {/* The wordmark: the laurel and the name, centered on the bar. */}
+      <a
+        href="#top"
+        aria-label="Lyceo, back to the top"
+        className="absolute top-1/2 flex -translate-y-1/2 items-center rounded-lg text-[#1e321d] no-underline"
+        style={{ left: v(198), gap: scrolled ? 10 : v(12) }}
       >
-        <Link href="/" aria-label="Lyceo home" className="justify-self-start rounded-lg no-underline">
-          <LyceoWordmark large />
-        </Link>
+        <LaurelMark
+          size={0}
+          className="shrink-0"
+          style={{ width: scrolled ? 42 : v(61), height: scrolled ? 42 : v(61) }}
+        />
+        <span
+          className="font-display font-[650] leading-none tracking-[-0.012em] [font-variation-settings:'opsz'_36]"
+          style={{ fontSize: scrolled ? 34 : v(48) }}
+        >
+          Lyceo
+        </span>
+      </a>
 
-        <nav aria-label="Lyceo" className="flex items-center gap-12 text-[1.02rem] text-[#1f241f]">
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenu((v) => !v)}
-              aria-expanded={menu}
-              aria-haspopup="menu"
-              className="inline-flex items-center gap-1.5 rounded-lg py-1 font-medium hover:text-grove"
+      <nav
+        aria-label="Lyceo"
+        className="absolute top-1/2 flex -translate-y-1/2 items-center font-medium"
+        style={{ left: v(594), gap: v(58), fontSize: `max(14px, ${v(16.5)})` }}
+      >
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenu((value) => !value)}
+            aria-expanded={menu}
+            aria-haspopup="menu"
+            className={`inline-flex items-center gap-[0.35em] ${link}`}
+          >
+            Product <ChevronDownIcon size={16} />
+          </button>
+          {menu && (
+            <div
+              role="menu"
+              className="absolute left-1/2 top-[2.2em] w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#e6dac6] bg-[#fbf6ee] p-2 text-[15px] shadow-xl"
             >
-              Product <ChevronDownIcon size={16} />
-            </button>
-            {menu && (
-              <div
-                role="menu"
-                className="absolute left-1/2 top-10 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#e6dac6] bg-[#fbf6ee] p-2 shadow-xl"
-              >
-                <MenuLink
-                  href="#academy"
-                  title="My Academy"
-                  note="Your courses, progress and next steps"
-                  onPick={() => setMenu(false)}
-                />
-                <MenuLink
-                  href="#learning"
-                  title="The learning experience"
-                  note="Lessons from your lectures, with Ask Lyceo"
-                  onPick={() => setMenu(false)}
-                />
-              </div>
-            )}
-          </div>
-          <a href="#lyceum" className="rounded-lg py-1 font-medium text-[#1f241f] no-underline hover:text-grove">
-            The Lyceum
-          </a>
-        </nav>
-
-        <div className="justify-self-end">
-          <SignInButton
-            label="Log in"
-            signedInLabel="My Academy"
-            icon="none"
-            className="inline-flex items-center rounded-full border border-[#d9cdb6] bg-[#fffdf8]/95 px-6 py-2.5 text-[1rem] font-medium text-[#1f241f] shadow-[0_6px_18px_-12px_rgba(40,30,10,0.5)] transition-colors hover:border-gold"
-          />
+              <MenuLink
+                href="#academy"
+                title="My Academy"
+                note="Your courses, progress and next steps"
+                onPick={() => setMenu(false)}
+              />
+              <MenuLink
+                href="#learning"
+                title="The learning experience"
+                note="Lessons from your lectures, with Ask Lyceo"
+                onPick={() => setMenu(false)}
+              />
+            </div>
+          )}
         </div>
+        <a href="#lyceum" className={link}>
+          The Lyceum
+        </a>
+        <a href="#resources" className={link}>
+          Resources
+        </a>
+        <a href="#about" className={link}>
+          About
+        </a>
+      </nav>
+
+      <div className="absolute top-1/2 -translate-y-1/2" style={{ right: v(108) }}>
+        <SignInButton
+          label="Log in"
+          signedInLabel="My Academy"
+          icon="none"
+          className="inline-flex items-center justify-center rounded-full border border-[#1d2f1a]/45 bg-[#f6efe5]/95 font-medium text-[#1d2a1d] shadow-[0_6px_18px_-12px_rgba(40,30,10,0.45)] transition-colors hover:bg-[#fffaf2]"
+          style={{
+            minWidth: scrolled ? 96 : v(103),
+            height: scrolled ? 42 : v(47),
+            padding: `0 ${scrolled ? '20px' : v(22)}`,
+            fontSize: `max(14px, ${v(18)})`,
+          }}
+        />
       </div>
     </header>
   )

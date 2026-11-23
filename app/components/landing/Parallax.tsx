@@ -9,10 +9,13 @@ import { useEffect, useRef } from 'react'
 export function Parallax({
   children,
   speed = 0.14,
+  startAtTop = false,
   className = '',
 }: {
   children: React.ReactNode
   speed?: number
+  /** For the first section: still at rest (as designed), drifting only as the page scrolls away from it. */
+  startAtTop?: boolean
   className?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -24,8 +27,10 @@ export function Parallax({
     const update = () => {
       const rect = section.getBoundingClientRect()
       if (rect.bottom < -200 || rect.top > window.innerHeight + 200) return
-      const fromCenter = rect.top + rect.height / 2 - window.innerHeight / 2
-      el.style.transform = `translate3d(0, ${(-fromCenter * speed).toFixed(1)}px, 0)`
+      const shift = startAtTop
+        ? Math.max(0, -rect.top) * speed
+        : -(rect.top + rect.height / 2 - window.innerHeight / 2) * speed
+      el.style.transform = `translate3d(0, ${shift.toFixed(1)}px, 0)`
     }
     const onScroll = () => {
       cancelAnimationFrame(frame)
@@ -39,38 +44,9 @@ export function Parallax({
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [speed])
+  }, [speed, startAtTop])
   return (
     <div ref={ref} className={`will-change-transform ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-/** Marks its section as seen once it scrolls into view (data-seen), for entrance details that play once. */
-export function Reveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.dataset.seen = 'true'
-      return
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          el.dataset.seen = 'true'
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.35 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-  return (
-    <div ref={ref} data-seen="false" className={`group/seen ${className}`}>
       {children}
     </div>
   )

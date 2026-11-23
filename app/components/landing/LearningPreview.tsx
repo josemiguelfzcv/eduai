@@ -1,165 +1,273 @@
+import type { CSSProperties } from 'react'
 import { renderDisplayMath, renderInline } from '../../lib/lesson-render'
 import {
+  ArrowLeftIcon,
   BookIcon,
+  CalendarIcon,
+  ChartIcon,
   ChatIcon,
-  CheckCircleIcon,
+  ChevronRightIcon,
+  ClipboardIcon,
   HomeIcon,
-  PersonIcon,
-  PlayCircleIcon,
-  PlayIcon,
+  LayersIcon,
+  NetworkIcon,
+  PanelRightIcon,
+  PlusIcon,
+  RepeatIcon,
+  SearchIcon,
+  SendIcon,
   SparkleIcon,
+  TargetIcon,
 } from '../learn/icons'
 import { LaurelMark } from '../learn/LaurelMark'
 
-// The lecture workspace drawn with the app's own styles: the course sidebar, the lesson with a definition box, and
-// Ask Lyceo answering a question about a passage. When it scrolls into view the passage is highlighted, asked
-// about, and answered. Formulas are typeset on the server; nothing here needs the browser.
+// A lecture as the laptop in section 3 shows it: an 879 × 564 screen, laid out on the design's own screen. Drawn with
+// the app's pieces: the one sidebar (the three places, then the course open at its lectures), the breadcrumbs, a
+// practice question as Quick Check asks it, the lesson's explanation with its formula typeset, and Ask Lyceo.
+// Formulas are typeset on the server; nothing here needs the browser.
 
+export const LEARNING_SCREEN = { width: 879, height: 564 }
+
+const THUMBS = '/images/lyceo/course_thumbnails'
+const at = (left: number, top: number, width?: number, height?: number): CSSProperties => ({
+  position: 'absolute',
+  left,
+  top,
+  width,
+  height,
+})
+const icon = (size: number): CSSProperties => ({ width: size, height: size })
 const html = (s: string) => ({ __html: renderInline(s) })
-const display = (tex: string) => ({ __html: renderDisplayMath(tex) })
 
-export function LearningPreview() {
+const OPTIONS = ['Breadth-First Search', 'Greedy Best-First Search', 'A* Search', 'Depth-First Search']
+
+export function LearningScreen() {
   return (
-    <div className="text-[clamp(7.5px,0.58vw,10px)]" aria-hidden="true">
-      <div className="rounded-[2.6em] bg-[#1c1e1b] p-[1.3em] shadow-[0_5em_8em_-3em_rgba(40,28,10,0.6)]">
-        <div className="grid h-[39.5em] grid-cols-[12.5em_1fr_19em] overflow-hidden rounded-[1.3em] bg-[#f6eee2]">
-          {/* The course sidebar */}
-          <div className="bg-[#173a20] px-[1.1em] py-[1.4em] text-[#f6f1e7]">
-            <span className="flex items-center gap-[0.45em]">
-              <LaurelMark size={20} className="text-[#f6f1e7]" />
-              <span className="font-display text-[1.5em] font-semibold">Lyceo</span>
+    <div className="relative overflow-hidden bg-[#fbf3ea] font-sans text-[#1f241c]" style={LEARNING_SCREEN}>
+      {/* The sidebar */}
+      <div className="absolute inset-y-0 left-0 w-[185px] bg-[#12301a] text-[#f1e9d8]">
+        <span className="flex items-center gap-[8px]" style={at(23, 18)}>
+          <LaurelMark size={0} className="text-[#efe5d1]" style={icon(28)} />
+          <span className="font-display text-[25px] font-medium leading-none [font-variation-settings:'opsz'_36]">
+            Lyceo
+          </span>
+        </span>
+        {[
+          { label: 'My Academy', Icon: HomeIcon, y: 72 },
+          { label: 'Study Plan', Icon: CalendarIcon, y: 104 },
+          { label: 'Global Progress', Icon: ChartIcon, y: 136 },
+        ].map(({ label, Icon, y }) => (
+          <span
+            key={label}
+            className="flex items-center gap-[11px] text-[13.5px] leading-none text-[#f1e9d8]/85"
+            style={at(30, y, 150, 17)}
+          >
+            <Icon size={0} style={icon(17)} />
+            {label}
+          </span>
+        ))}
+        <span className="h-px bg-[#f1e9d8]/15" style={at(13, 168, 158, 1)} />
+        <span className="text-[11px] font-medium leading-none text-[#f1e9d8]/65" style={at(22, 183)}>
+          Your Courses
+        </span>
+        <span
+          className="flex items-center gap-[9px] rounded-[9px] bg-[#f1e9d8]/[0.12] ring-1 ring-[#f1e9d8]/[0.12]"
+          style={at(13, 199, 158, 34)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${THUMBS}/02_responsible_ai_csci_382.webp`}
+            alt=""
+            className="ml-[4px] size-[26px] rounded-[6px] object-cover"
+          />
+          <span className="font-display text-[14.5px] font-semibold leading-none">CSCI 270</span>
+        </span>
+        <span className="rounded-[8px] bg-[#f1e9d8]/[0.16]" style={at(21, 269, 150, 28)} />
+        {[
+          { label: 'Overview', Icon: HomeIcon },
+          { label: 'Lectures', Icon: BookIcon },
+          { label: 'Assignments', Icon: ClipboardIcon },
+          { label: 'Materials', Icon: LayersIcon },
+          { label: 'Knowledge Map', Icon: NetworkIcon },
+        ].map(({ label, Icon }, i) => (
+          <span
+            key={label}
+            className={`flex items-center gap-[10px] text-[13px] leading-none ${i === 1 ? 'font-medium' : 'text-[#f1e9d8]/80'}`}
+            style={at(31, 244 + i * 31, 140, 16)}
+          >
+            <Icon size={0} style={icon(15)} />
+            {label}
+          </span>
+        ))}
+        {[
+          { code: 'MATH 341', art: `${THUMBS}/01_probability_math_341.webp` },
+          { code: 'ECON 232', art: `${THUMBS}/03_financial_economics_econ_232.webp` },
+        ].map((c, i) => (
+          <span key={c.code} className="flex items-center gap-[9px]" style={at(17, 409 + i * 38, 150, 26)}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={c.art} alt="" className="size-[26px] rounded-[6px] object-cover opacity-90" />
+            <span className="font-display text-[14.5px] font-semibold leading-none text-[#f1e9d8]/90">{c.code}</span>
+          </span>
+        ))}
+        <span className="h-px bg-[#f1e9d8]/15" style={at(13, 488, 158, 1)} />
+        <span className="flex items-center gap-[11px] text-[13.5px] leading-none text-[#f1e9d8]/85" style={at(30, 503)}>
+          <PlusIcon size={0} style={icon(17)} />
+          Add a course
+        </span>
+      </div>
+
+      {/* The lecture */}
+      <span className="flex items-center gap-[7px] text-[12.5px] leading-none text-[#6b665c]" style={at(211, 21)}>
+        <ArrowLeftIcon size={0} style={icon(13)} />
+        My Academy
+        <ChevronRightIcon size={0} style={icon(11)} />
+        CSCI 270
+        <ChevronRightIcon size={0} style={icon(11)} />
+        <span className="font-semibold text-[#1f241c]">Lecture 6</span>
+      </span>
+      <SearchIcon size={0} strokeWidth={1.9} style={{ ...at(792, 23), ...icon(17) }} />
+      <PanelRightIcon size={0} strokeWidth={1.8} style={{ ...at(831, 23), ...icon(17) }} />
+      <p
+        className="m-0 font-display text-[24px] font-bold leading-none text-[#1d211a] [font-variation-settings:'opsz'_24]"
+        style={at(211, 49)}
+      >
+        A* Search
+      </p>
+      <p className="m-0 font-display text-[14px] leading-none text-[#2d2b26]" style={at(212, 80)}>
+        An informed search algorithm that uses a heuristic to efficiently find the lowest-cost path.
+      </p>
+
+      <div
+        className="flex items-center rounded-[12px] border border-[#ece1d1] bg-[#fdf7f0] p-[3px] text-[13.5px] font-medium leading-none"
+        style={at(207, 110, 653, 37)}
+      >
+        {[
+          { label: 'Learn', Icon: BookIcon },
+          { label: 'Practice', Icon: TargetIcon },
+          { label: 'Review', Icon: RepeatIcon },
+        ].map(({ label, Icon }, i) => (
+          <span
+            key={label}
+            className={`flex h-full flex-1 items-center justify-center gap-[9px] rounded-[9px] ${i === 1 ? 'bg-[#d8e0c6] text-[#1d2f1a]' : ''}`}
+          >
+            <Icon size={0} style={icon(17)} />
+            {label}
+          </span>
+        ))}
+      </div>
+
+      {/* Practice, as Quick Check asks it */}
+      <div
+        className="rounded-[14px] border border-[#ece1d1] bg-[#faf2e9] shadow-[0_10px_24px_-18px_rgba(70,45,15,0.55)]"
+        style={at(207, 163, 314, 329)}
+      >
+        <span
+          className="grid place-items-center rounded-full bg-[#e2e9cf] text-[12.5px] font-medium text-[#2e4a24]"
+          style={at(22, 13, 68, 22)}
+        >
+          Practice
+        </span>
+        <span className="text-[12px] font-medium leading-none text-[#3b3a35]" style={at(256, 18)}>
+          Q3 of 5
+        </span>
+        <p
+          className="m-0 whitespace-nowrap font-display text-[15px] font-bold leading-[19px] text-[#1d211a] [font-variation-settings:'opsz'_16]"
+          style={at(28, 46)}
+        >
+          Which search algorithm is
+          <br />
+          guaranteed to find the optimal
+          <br />
+          solution when a heuristic is admissible?
+        </p>
+        {OPTIONS.map((option, i) => {
+          const chosen = i === 2
+          return (
+            <span
+              key={option}
+              className={`flex items-center rounded-[8px] text-[13px] font-medium leading-none ${
+                chosen ? 'border-[1.5px] border-[#3f5d31] bg-[#e8ebd2]' : 'border border-[#ebe1d4] bg-[#fbf5ef]'
+              }`}
+              style={at(chosen ? 15 : 18, 113 + i * 38.3, chosen ? 284 : 272, chosen ? 31 : 29)}
+            >
+              <span
+                className={`ml-[13px] mr-[14px] grid size-[22px] place-items-center rounded-full text-[12px] font-semibold ${
+                  chosen ? 'bg-[#1f3d22] text-[#f6efe1]' : 'text-[#2a2924]'
+                }`}
+              >
+                {'ABCD'[i]}
+              </span>
+              {option}
             </span>
-            <p className="mt-[1.4em] font-display text-[1.05em] font-semibold">MATH 341</p>
-            <p className="text-[0.78em] opacity-75">Probability</p>
-            <ul className="mt-[1em] space-y-[0.25em] text-[0.92em]">
-              <li className="flex items-center gap-[0.5em] px-[0.5em] py-[0.35em] opacity-85">
-                <HomeIcon size={13} /> Overview
-              </li>
-              <li className="flex items-center gap-[0.5em] rounded-[0.5em] bg-white/15 px-[0.5em] py-[0.35em]">
-                <BookIcon size={13} /> Lectures
-              </li>
-            </ul>
-            <ol className="mt-[0.5em] space-y-[0.3em] pl-[0.6em] text-[0.8em]">
-              {['Random Variables', 'Distributions'].map((t, i) => (
-                <li key={t} className="flex items-center gap-[0.5em] opacity-85">
-                  <CheckCircleIcon size={12} /> {i + 4} {t}
-                </li>
-              ))}
-              <li className="flex items-center gap-[0.5em] rounded-[0.5em] bg-[#efe9d8] px-[0.4em] py-[0.3em] font-semibold text-[#173a20]">
-                <PlayCircleIcon size={12} /> 6 Moment Generating…
-              </li>
-            </ol>
-          </div>
+          )
+        })}
+        <span
+          className="grid place-items-center rounded-[8px] bg-[#17371b] text-[13px] font-medium text-[#f6efe1]"
+          style={at(22, 291, 119, 31)}
+        >
+          Check answer
+        </span>
+        <span
+          className="text-[12.5px] leading-none text-[#2e4a24] underline underline-offset-[3px]"
+          style={at(160, 300)}
+        >
+          Show a hint
+        </span>
+      </div>
 
-          {/* The lesson */}
-          <div className="overflow-hidden px-[1.8em] py-[1.5em]">
-            <p className="text-[0.85em] text-[#5a594f]">Lecture 6 of 12</p>
-            <p className="font-display text-[2em] font-bold leading-tight text-[#1d1c19]">
-              Moment Generating Functions
-            </p>
-            <div className="mt-[0.7em] h-[0.45em] rounded-full bg-[#ebdfcf]">
-              <div className="h-full w-[38%] rounded-full bg-[#3d5a37]" />
-            </div>
-            <div className="mt-[1.1em] rounded-[1.2em] border border-[#eee3d2] bg-[#fffaf3] px-[1.4em] py-[1.2em]">
-              <p className="flex items-center gap-[0.45em] text-[0.9em] font-semibold text-[#1d1c19]">
-                <LaurelMark size={16} className="text-[#173a20]" /> Lyceo
-              </p>
-              <p
-                className="lesson-text mt-[0.5em] font-display text-[1.08em] leading-[1.55] text-[#24231f]"
-                dangerouslySetInnerHTML={html(
-                  'Today we study **moment generating functions**: one function that holds a whole distribution.',
-                )}
-              />
-              <p className="lesson-text relative mt-[0.5em] font-display text-[1.08em] leading-[1.55] text-[#24231f]">
-                <span className="rounded-[0.2em] transition-colors delay-300 duration-700 group-data-[seen=true]/seen:bg-[#f2dfa8]">
-                  Its moments become derivatives at zero.
-                </span>
-                <span className="ml-[0.8em] inline-block translate-y-[0.2em] whitespace-nowrap rounded-full bg-[#173a20] px-[0.9em] py-[0.3em] align-middle font-sans text-[0.72em] text-[#fbf5ea] opacity-0 shadow-lg transition-[opacity,transform] delay-700 duration-500 group-data-[seen=true]/seen:translate-y-0 group-data-[seen=true]/seen:opacity-100">
-                  Ask about this
-                </span>
-              </p>
-              <div className="mt-[1em] overflow-hidden rounded-[1em] border border-[#e9dfcd]">
-                <p className="flex items-center gap-[0.6em] bg-[#f3ecdd] px-[1em] py-[0.55em] text-[0.78em] font-semibold uppercase tracking-[0.1em] text-[#3b3426]">
-                  <BookIcon size={12} /> What is a moment generating function?
-                </p>
-                <div className="bg-[#fcf5ea] px-[1.2em] py-[0.9em]">
-                  <p
-                    className="lesson-text font-display text-[1em] text-[#24231f]"
-                    dangerouslySetInnerHTML={html('The **MGF** of a random variable $X$ is')}
-                  />
-                  <div className="mt-[0.5em] flex justify-center">
-                    <div
-                      className="lesson-math rounded-[0.8em] border border-[#ecdfca] bg-[#f8efe1] px-[1em] py-[0.2em]"
-                      dangerouslySetInnerHTML={display('M_X(t) = E[e^{tX}]')}
-                    />
-                  </div>
-                  <p
-                    className="lesson-text mt-[0.5em] font-display text-[1em] text-[#24231f]"
-                    dangerouslySetInnerHTML={html(
-                      "Where it exists near $t = 0$, each derivative at $0$ is a moment: $E[X] = M_X'(0)$.",
-                    )}
-                  />
-                </div>
-              </div>
-              <div className="mt-[1.1em] flex gap-[0.7em]">
-                <span className="flex items-center gap-[0.5em] rounded-full bg-[#173a20] px-[1.2em] py-[0.6em] text-[0.85em] font-semibold text-[#fbf5ea]">
-                  <PlayIcon size={11} /> Continue: The exponential
-                </span>
-                <span className="flex items-center gap-[0.5em] rounded-full border border-[#dcc9a3] px-[1.2em] py-[0.6em] text-[0.85em] font-semibold text-[#173a20]">
-                  <span className="text-[#b9893a]">
-                    <SparkleIcon size={11} />
-                  </span>
-                  Practice this section
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Ask Lyceo */}
-          <div className="flex flex-col border-l border-[#eadfcd] bg-[#fbf4eb] px-[1.2em] py-[1.4em]">
-            <p className="flex items-center gap-[0.5em] font-display text-[1.6em] font-bold text-[#1d1c19]">
-              <ChatIcon size={16} /> Ask Lyceo
-            </p>
-            <p className="text-[0.78em] text-[#5a594f]">Questions about the lesson, without leaving it.</p>
-            <div className="mt-[1.2em] space-y-[0.9em]">
-              <div className="flex translate-y-[0.6em] items-start gap-[0.5em] opacity-0 transition delay-[1100ms] duration-500 group-data-[seen=true]/seen:translate-y-0 group-data-[seen=true]/seen:opacity-100">
-                <span className="grid size-[2em] shrink-0 place-items-center rounded-full bg-[#ebe6d5] text-[#3e3d36]">
-                  <PersonIcon size={12} />
-                </span>
-                <div className="rounded-[1em] bg-[#e3e2cc] px-[0.9em] py-[0.6em] text-[0.86em] leading-snug text-[#1d1c19]">
-                  <p className="mb-[0.3em] border-l-2 border-[#173a20]/30 pl-[0.5em] text-[0.92em] italic text-[#4b4a42]">
-                    “Its moments become derivatives at zero.”
-                  </p>
-                  Why does the derivative at 0 give the mean?
-                </div>
-              </div>
-              <div className="flex translate-y-[0.6em] items-start gap-[0.5em] opacity-0 transition delay-[1900ms] duration-500 group-data-[seen=true]/seen:translate-y-0 group-data-[seen=true]/seen:opacity-100">
-                <LaurelMark size={20} className="mt-[0.3em] shrink-0 text-[#173a20]" />
-                <div className="rounded-[1em] border border-[#eee4d4] bg-[#fffbf6] px-[0.9em] py-[0.7em]">
-                  <p className="text-[0.82em] font-semibold text-[#1d1c19]">Lyceo</p>
-                  <p
-                    className="lesson-text mt-[0.2em] font-display text-[0.92em] leading-[1.45] text-[#24231f]"
-                    dangerouslySetInnerHTML={html(
-                      "Differentiate inside the expectation: $M_X'(t) = E[Xe^{tX}]$. At $t = 0$ the exponential is $1$, so",
-                    )}
-                  />
-                  <div className="mt-[0.4em] flex justify-center">
-                    <div
-                      className="lesson-math rounded-[0.7em] border border-[#ecdfca] bg-[#f8efe1] px-[0.8em] text-[0.9em]"
-                      dangerouslySetInnerHTML={display("M_X'(0) = E[X]")}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-auto rounded-[1em] border border-[#e6dac6] bg-[#fffaf3] px-[0.9em] py-[0.7em] text-[0.82em] text-[#7a776c]">
-              Ask a follow-up question…
-            </div>
-          </div>
+      {/* The lesson's explanation */}
+      <div
+        className="rounded-[14px] border border-[#ece1d1] bg-[#faf2e9] shadow-[0_10px_24px_-18px_rgba(70,45,15,0.55)]"
+        style={at(535, 163, 326, 329)}
+      >
+        <span className="flex items-center gap-[10px]" style={at(22, 15)}>
+          <SparkleIcon size={0} className="text-[#c08a2a]" strokeWidth={2} style={icon(16)} />
+          <span className="font-display text-[16.5px] font-bold leading-none text-[#1d211a] [font-variation-settings:'opsz'_16]">
+            Understanding the Concept
+          </span>
+        </span>
+        <p
+          className="lesson-text m-0 font-display text-[13.5px] leading-[17.6px] text-[#24231f]"
+          style={at(28, 44, 285)}
+          dangerouslySetInnerHTML={html(
+            'A* Search is optimal when the heuristic is admissible, meaning it never overestimates the true cost to the goal. It scores each node by the path cost so far, $g(n)$, plus a heuristic estimate, $h(n)$:',
+          )}
+        />
+        <div
+          className="lesson-math grid place-items-center rounded-[10px] border border-[#ecdfca] bg-[#f6eddf] text-[15px]"
+          style={at(28, 152, 270, 52)}
+          dangerouslySetInnerHTML={{ __html: renderDisplayMath('f(n) = g(n) + h(n)') }}
+        />
+        <p
+          className="lesson-text m-0 font-display text-[13.5px] leading-[17.6px] text-[#24231f]"
+          style={at(28, 216, 285)}
+          dangerouslySetInnerHTML={html('It always expands the node with the lowest $f(n)$ next.')}
+        />
+        <div
+          className="flex gap-[9px] rounded-[10px] bg-[#eef0de] text-[11px] leading-[15px]"
+          style={at(11, 266, 304, 49)}
+        >
+          <BookIcon size={0} className="ml-[10px] mt-[9px] shrink-0" style={icon(15)} />
+          <p className="m-0 mt-[9px] pr-[10px] text-[#2a2924]">
+            <span className="font-semibold">Key takeaway</span>&nbsp; A* is both complete and optimal when the heuristic
+            is admissible.
+          </p>
         </div>
       </div>
-      {/* The laptop's base */}
-      <div className="mx-auto h-[1.4em] w-[108%] -translate-x-[3.7%] rounded-b-[1.6em] bg-gradient-to-b from-[#d9d3c8] to-[#b9b2a6] shadow-[0_2em_3em_-1.4em_rgba(40,28,10,0.55)]" />
+
+      {/* Ask Lyceo */}
+      <div
+        className="flex items-center rounded-[12px] border border-[#ebe0d0] bg-[#fcf6ef] shadow-[0_8px_20px_-16px_rgba(70,45,15,0.5)]"
+        style={at(207, 510, 654, 37)}
+      >
+        <ChatIcon size={0} className="ml-[14px] text-[#3b3a35]" style={icon(16)} />
+        <span className="ml-[12px] text-[12.5px] leading-none text-[#6b665c]">
+          Ask Lyceo a question about this lesson…
+        </span>
+        <span className="ml-auto mr-[8px] grid size-[26px] place-items-center rounded-full bg-[#ebe4d8] text-[#3b3a35]">
+          <SendIcon size={0} style={icon(13)} />
+        </span>
+      </div>
     </div>
   )
 }

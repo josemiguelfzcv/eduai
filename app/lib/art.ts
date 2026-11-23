@@ -44,6 +44,8 @@ export const LANDING = {
 } as const
 
 export const TOPBAR_SCENE = `${BASE}/derived/topbar-valley.webp`
+/** Where the hero's picture moves: red for leaves in the breeze, green for the drifting sky. */
+export const HERO_MOTION = `${BASE}/derived/hero-motion.webp`
 
 type CourseLike = { id: number; name: string; code: string | null }
 

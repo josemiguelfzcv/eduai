@@ -1,41 +1,39 @@
-import { LANDING } from '../../lib/art'
+import { HERO_MOTION, LANDING } from '../../lib/art'
 import { SignInButton } from '../SignInButton'
+import { HeroScene } from './HeroScene'
 import { Parallax } from './Parallax'
 
-// Section 1, exactly as the approved hero: the scene fills a 1672 × 941 frame that scales with the window, and the
-// words sit where the design puts them (positions measured on that frame, so every size is in cqw of the section). At rest the
-// scene and the words line up as designed; as the page scrolls away, the scene drifts a little behind them.
+// Section 1, the approved hero. It fills the window exactly, so the next section never shows under it, and the scene
+// covers it. The words sit where the design puts them on its 1672 × 941 frame; one design pixel is the frame scaled
+// to the section (by its width or its height, whichever is tighter), so nothing outgrows the window. The headline and
+// the wordmark are set calmer than the mockup: at full screen its sizes were overwhelming.
 
-const v = (px: number) => `${((px / 1672) * 100).toFixed(3)}cqw`
+const W = 1672
+const H = 941
+/** Past this the words stop growing with the window (very large displays). */
+const LARGEST = 1.2
+const v = (px: number) =>
+  `${px < 0 ? 'max' : 'min'}(${((px / W) * 100).toFixed(3)}cqw, ${((px / H) * 100).toFixed(3)}cqh, ${(px * LARGEST).toFixed(1)}px)`
 
 export function Hero() {
   return (
     <section
       id="top"
       aria-labelledby="hero-title"
-      className="relative w-full overflow-hidden bg-[#efe6d4] [container-type:inline-size]"
-      style={{ aspectRatio: '1672 / 941' }}
+      className="relative h-svh max-h-[62.5vw] min-h-[520px] w-full overflow-hidden bg-[#efe6d4] [container-type:size]"
     >
       <Parallax speed={0.18} startAtTop className="absolute inset-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={LANDING.hero}
-          alt=""
-          width={1672}
-          height={941}
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover"
-        />
+        <HeroScene src={LANDING.hero} motion={HERO_MOTION} width={W} height={H} />
       </Parallax>
       {/* The design's warm haze: light over the sky, strongest behind the words so they read. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(40% 50% at 31% 46%, rgba(252,245,236,0.86), rgba(252,245,236,0.58) 50%, rgba(252,245,236,0) 88%), linear-gradient(to bottom, rgba(251,242,231,0.4), rgba(251,242,231,0.2) 46%, rgba(251,242,231,0) 66%)',
-        }}
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(251,242,231,0.4),rgba(251,242,231,0.2)_46%,rgba(251,242,231,0)_66%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bg-[radial-gradient(closest-side,rgba(252,245,236,0.86),rgba(252,245,236,0.58)_50%,rgba(252,245,236,0)_88%)]"
+        style={{ left: v(-150), top: v(-36), width: v(1338), height: v(940) }}
       />
       {/* The morning light, breathing slowly. */}
       <div
@@ -44,46 +42,46 @@ export function Hero() {
       />
 
       <p
-        className="absolute font-sans font-semibold uppercase leading-none text-[#a4701c]"
-        style={{ left: v(226), top: v(204), fontSize: v(18.1), letterSpacing: '0.258em' }}
+        className="absolute m-0 whitespace-nowrap font-sans font-semibold uppercase leading-none text-[#a4701c]"
+        style={{ left: v(226), top: v(228), fontSize: v(16.2), letterSpacing: '0.258em' }}
       >
         The Lyceum, reimagined
       </p>
       <span
         aria-hidden="true"
         className="absolute bg-[#9e6a10]"
-        style={{ left: v(226), top: v(253), width: v(81), height: v(4) }}
+        style={{ left: v(226), top: v(270), width: v(72), height: v(3.5) }}
       />
       <h1
         id="hero-title"
-        className="absolute m-0 font-display font-[650] text-[#1d2f1a] [font-variation-settings:'opsz'_36]"
-        style={{ left: v(225), top: v(285), fontSize: v(103), lineHeight: v(93), letterSpacing: '0.012em' }}
+        className="absolute m-0 whitespace-nowrap font-display font-[650] text-[#1d2f1a] [font-variation-settings:'opsz'_36]"
+        style={{ left: v(225), top: v(296), fontSize: v(84), lineHeight: v(77), letterSpacing: '0.012em' }}
       >
         For minds
         <br />
         in motion.
       </h1>
       <p
-        className="absolute m-0 font-display text-[#283a26] [font-variation-settings:'opsz'_24]"
-        style={{ left: v(227), top: v(482), fontSize: v(29), lineHeight: v(34) }}
+        className="absolute m-0 whitespace-nowrap font-display text-[#283a26] [font-variation-settings:'opsz'_24]"
+        style={{ left: v(227), top: v(463), fontSize: v(25.5), lineHeight: v(31) }}
       >
         Inspired by the thinkers of yesterday.
         <br />
         Built for the curious minds of tomorrow.
       </p>
 
-      <div className="absolute flex items-center" style={{ left: v(225), top: v(582), gap: v(22) }}>
+      <div className="absolute flex items-center" style={{ left: v(225), top: v(553), gap: v(20) }}>
         <SignInButton
           label="Enter the Academy"
           signedInLabel="Enter the Academy"
           icon="arrow"
           className="inline-flex items-center justify-center rounded-full bg-[#1d2f1a] font-display font-medium text-[#f6f0e4] shadow-[0_14px_30px_-18px_rgba(20,45,20,0.8)] transition-colors hover:bg-[#26401f] [&_.btn-arrow]:ml-[0.75em] [&_.btn-arrow]:size-[1em]"
-          style={{ width: v(276), height: v(51), fontSize: v(21) }}
+          style={{ width: v(248), height: v(47), fontSize: v(19.5) }}
         />
         <a
           href="#academy"
           className="inline-flex items-center justify-center rounded-full border-2 border-[#1d2f1a]/70 bg-[#f6ede2]/85 font-display font-medium text-[#1d2a1d] no-underline backdrop-blur-[2px] transition-colors hover:bg-[#fbf5ec]"
-          style={{ width: v(217), height: v(52), fontSize: v(21) }}
+          style={{ width: v(196), height: v(47), fontSize: v(19.5) }}
         >
           Explore Lyceo
         </a>

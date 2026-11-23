@@ -5,11 +5,12 @@ import { ChevronDownIcon } from '../learn/icons'
 import { LaurelMark } from '../learn/LaurelMark'
 import { SignInButton } from '../SignInButton'
 
-// The landing's navigation, laid out like the approved hero (measured on its 1672px frame, so every size is in vw):
-// the wordmark at the left, Product, The Lyceum, Resources and About in the middle, Log in at the right. Over the
-// hero it sits on the scene; once the page scrolls it settles on a band of ivory.
+// The landing's navigation, laid out like the approved hero: the wordmark at the left, Product, The Lyceum, Resources
+// and About in the middle, Log in at the right. Sizes follow the hero's own scale (its 1672 × 941 frame fitted to the
+// window, see Hero). Over the hero it sits on the scene; once the page scrolls it settles on a band of ivory.
 
-const v = (px: number) => `${((px / 1672) * 100).toFixed(3)}vw`
+const v = (px: number) =>
+  `min(${((px / 1672) * 100).toFixed(3)}vw, ${((px / 941) * 100).toFixed(3)}svh, ${(px * 1.2).toFixed(1)}px)`
 
 export function SiteNav() {
   const [scrolled, setScrolled] = useState(false)
@@ -44,7 +45,7 @@ export function SiteNav() {
       className={`fixed inset-x-0 top-0 z-50 transition-[height,background-color,box-shadow] duration-300 ${
         scrolled ? 'bg-[#f8f2e8]/92 shadow-[0_8px_30px_-22px_rgba(40,30,10,0.55)] backdrop-blur-md' : ''
       }`}
-      style={{ height: scrolled ? 76 : v(224) }}
+      style={{ height: scrolled ? 68 : v(224) }}
     >
       <a
         href="#main"
@@ -58,16 +59,16 @@ export function SiteNav() {
         href="#top"
         aria-label="Lyceo, back to the top"
         className="absolute top-1/2 flex -translate-y-1/2 items-center rounded-lg text-[#1e321d] no-underline"
-        style={{ left: v(198), gap: scrolled ? 10 : v(12) }}
+        style={{ left: v(198), gap: scrolled ? 8 : v(10) }}
       >
         <LaurelMark
           size={0}
           className="shrink-0"
-          style={{ width: scrolled ? 42 : v(61), height: scrolled ? 42 : v(61) }}
+          style={{ width: scrolled ? 36 : v(50), height: scrolled ? 36 : v(50) }}
         />
         <span
           className="font-display font-[650] leading-none tracking-[-0.012em] [font-variation-settings:'opsz'_36]"
-          style={{ fontSize: scrolled ? 34 : v(48) }}
+          style={{ fontSize: scrolled ? 28 : v(39.5) }}
         >
           Lyceo
         </span>
@@ -126,10 +127,10 @@ export function SiteNav() {
           icon="none"
           className="inline-flex items-center justify-center rounded-full border border-[#1d2f1a]/45 bg-[#f6efe5]/95 font-medium text-[#1d2a1d] shadow-[0_6px_18px_-12px_rgba(40,30,10,0.45)] transition-colors hover:bg-[#fffaf2]"
           style={{
-            minWidth: scrolled ? 96 : v(103),
-            height: scrolled ? 42 : v(47),
+            minWidth: scrolled ? 92 : v(98),
+            height: scrolled ? 40 : v(44),
             padding: `0 ${scrolled ? '20px' : v(22)}`,
-            fontSize: `max(14px, ${v(18)})`,
+            fontSize: `max(14px, ${v(17)})`,
           }}
         />
       </div>

@@ -10,7 +10,7 @@ import {
 } from '../../../../lib/server/learning-data'
 import { addItems, itemForGrading, type NewItem } from '../../../../lib/server/records'
 import { clientClock, sessionId, sessionView } from '../../../../lib/server/sessions'
-import { toItem } from '../../../../lib/questions'
+import { plainText, tooClose, toItem } from '../../../../lib/questions'
 import { citation } from '../../../../lib/skill-map'
 import { MAX_ROUNDS, roundsUsed, type PlannedQuestion } from '../../../../lib/study'
 
@@ -90,23 +90,33 @@ export async function POST(req: NextRequest, context: Context) {
     // The citation is kept only if its words are really on that page of the student's material.
     const sources_ = citation(ctx.excerpts, explained.page, explained.quote)
 
+    const explanationText = plainText(explained.explanation).trim().slice(0, 3000)
+    // Same skill, same or lower difficulty, and where the skill allows it, another angle than the missed question:
+    // a recognition question is followed by one that applies or carries out the idea.
+    const otherAngle = (skill.facets ?? []).find((f) => f !== item.facet && f !== 'conceptual')
     const slot: PlannedQuestion = {
       skillId: item.skill_id,
       difficulty: Math.max(1, round === 2 ? item.difficulty - 1 : item.difficulty) as 1 | 2 | 3,
-      facet: item.facet,
+      facet: item.facet === 'conceptual' && otherAngle ? otherAngle : item.facet,
     }
+    // Up to two tries for a problem that can be graded and that makes the student use the idea: one sharing a run of
+    // words with the explanation or the missed question would be answered by matching words. If both tries are too
+    // close, the last one that can be graded is used rather than none.
     let practice: NewItem | null = null
-    for (let attempt = 0; attempt < 2 && !practice; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       const written = await writePractice({
         skill: ctx,
         slot,
-        explanation: explained.explanation,
+        explanation: explanationText,
         previous: item.prompt,
         graded: (graded ?? []).length > 0,
         userId: user.id,
         studySessionId: id,
       })
-      practice = toItem(`p-${itemId}`, slot, written, { follows: itemId, round })
+      const candidate = toItem(`p-${itemId}`, slot, written, { follows: itemId, round })
+      if (!candidate) continue
+      practice = candidate
+      if (!tooClose(candidate.prompt, explanationText) && !tooClose(candidate.prompt, item.prompt)) break
     }
     const explanation: NewItem = {
       id: `x-${itemId}`,
@@ -114,7 +124,7 @@ export async function POST(req: NextRequest, context: Context) {
       skillId: item.skill_id,
       difficulty: slot.difficulty,
       facet: slot.facet,
-      prompt: explained.explanation.trim().slice(0, 3000),
+      prompt: explanationText,
       sources: sources_,
       follows: itemId,
       round,

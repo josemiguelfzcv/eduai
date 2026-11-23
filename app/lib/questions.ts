@@ -3,6 +3,7 @@
 
 import { readNumber } from './grading/equivalence'
 import { normalizeText } from './skill-map'
+import { plainText } from './text'
 import type { PlannedQuestion } from './study'
 import type { ItemKey, NewItem } from './server/records'
 
@@ -25,12 +26,34 @@ export type GeneratedQuestion = {
   page: number | null
 }
 
+export { plainText }
+
 const LETTERS = 'ABCDE'
+
 const clip = (s: unknown, max: number) =>
-  String(s ?? '')
+  plainText(String(s ?? ''))
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max)
+
+const tokens = (s: string) =>
+  normalizeText(s)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3)
+
+/**
+ * A practice problem too close to a text the student just read: they share a run of six words, so matching words
+ * would answer it instead of using the idea.
+ */
+export function tooClose(problem: string, read: string, run = 6) {
+  const a = tokens(problem)
+  const b = tokens(read)
+  if (a.length < run || b.length < run) return false
+  const runs = new Set<string>()
+  for (let i = 0; i + run <= b.length; i++) runs.add(b.slice(i, i + run).join(' '))
+  for (let i = 0; i + run <= a.length; i++) if (runs.has(a.slice(i, i + run).join(' '))) return true
+  return false
+}
 const stripLabel = (s: string) => s.replace(/^\(?[A-Ea-e][.):]\s+/, '').trim()
 
 /** The key and the public question, or null when the question can't be graded reliably. */
@@ -40,10 +63,10 @@ export function toItem(
   g: GeneratedQuestion,
   extra: { follows?: string; round?: 1 | 2 } = {},
 ): NewItem | null {
-  const prompt = String(g.prompt ?? '')
+  const prompt = plainText(String(g.prompt ?? ''))
     .trim()
     .slice(0, 1500)
-  const solution = String(g.solution ?? '')
+  const solution = plainText(String(g.solution ?? ''))
     .trim()
     .slice(0, 2000)
   if (prompt.length < 10 || !solution) return null

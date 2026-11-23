@@ -168,3 +168,31 @@ describe('a written question becomes an item only if it can be graded', () => {
     assert.equal(item.key?.rubric?.length, 1)
   })
 })
+
+describe('what the student reads after a miss', () => {
+  test('markdown emphasis never shows its asterisks; math is left alone', async () => {
+    const { plainText } = await import('../app/lib/text')
+    assert.equal(plainText('is called **probing the model** (choice B)'), 'is called probing the model (choice B)')
+    assert.equal(plainText('## Idea\nUse $a**b$ and __this__.'), 'Idea\nUse $a**b$ and this.')
+  })
+
+  test('a new problem that repeats the explanation’s words is caught', async () => {
+    const { tooClose } = await import('../app/lib/questions')
+    const explanation =
+      'The one that treats the model as a function, then perturbs input and observes how output changes is called probing the model.'
+    assert.equal(
+      tooClose(
+        'Which strategy treats the model as a function, then perturbs input and observes how output changes?',
+        explanation,
+      ),
+      true,
+    )
+    assert.equal(
+      tooClose(
+        'A team reads the attention weights of a transformer to see which words mattered. Which strategy is that, and why is it not probing?',
+        explanation,
+      ),
+      false,
+    )
+  })
+})

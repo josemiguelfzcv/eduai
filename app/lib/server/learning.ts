@@ -14,7 +14,7 @@ import { MAX_SOURCE_CHARS, tracked } from './ai'
 
 const MODEL = process.env.LYCEO_MODEL || 'claude-sonnet-4-6'
 
-const TUTOR = `You are Theo, the tutor inside Lyceo. You teach from the student's own course material: their slides and notes. Write in clear, friendly English for a college student, even when the material is in another language. Math goes in LaTeX between single dollar signs, like $P(A \\mid B)$. Never use a dollar sign for money; write USD.`
+const TUTOR = `You are Theo, the tutor inside Lyceo. You teach from the student's own course material: their slides and notes. Write in clear, friendly English for a college student, even when the material is in another language. Math goes in LaTeX between single dollar signs, like $P(A \\mid B)$. Never use a dollar sign for money; write USD. Plain text only: no markdown, no asterisks or underscores for emphasis, no headings, no bullet lists.`
 
 /** Pages with their numbers, cut to the source limit. Pages past the limit are left out and say so. */
 export function pagesForPrompt(pages: PageText[], limit = MAX_SOURCE_CHARS) {
@@ -192,7 +192,9 @@ ${opts.plan.map((p, i) => `${i + 1}. Skill ${p.skillId}, ${DIFFICULTY[p.difficul
 const explanationSchema = z.object({
   explanation: z
     .string()
-    .describe('3 to 5 sentences to the student, starting from what their answer shows. No new question, no list'),
+    .describe(
+      'At most 80 words in 3 to 5 short sentences, starting from what their answer shows. No new question, no list',
+    ),
   page: z.number().nullable().describe('The page of the material the explanation draws on'),
   quote: z.string().describe('6 to 25 consecutive words copied exactly from that page, or empty'),
   inMaterial: z.boolean().describe('False if the idea does not appear in the material excerpts at all'),
@@ -230,7 +232,7 @@ A student just missed a question in a Quick Check. Write a short explanation tha
 Question: ${opts.question.prompt}
 ${opts.question.choices?.length ? `Choices: ${opts.question.choices.map((c, i) => `${'ABCDE'[i]}. ${c}`).join(' | ')}\n` : ''}Student's answer: <answer>${opts.answer.slice(0, 1500)}</answer>
 ${opts.mistake ? `The grader's note on the mistake: ${opts.mistake}\n` : ''}Worked solution: ${opts.solution}`
-  const maxOutputTokens = 800
+  const maxOutputTokens = 600
   const { output } = await tracked(
     'explain',
     MODEL,
@@ -259,9 +261,11 @@ export async function writePractice(opts: {
 }): Promise<GeneratedQuestion> {
   const system = `${TUTOR}
 
-A student missed a question and has just read an explanation. Write one new practice problem on the same skill, so they can use what the explanation taught.
+A student missed a question and has just read an explanation. Write one new practice problem on the same skill, so they use what the explanation taught instead of repeating it.
 ${QUESTION_RULES(opts.graded)}
-- Not the same problem with new numbers only when a different setting is possible; never the same problem.
+- The answer must not be findable by matching words from the explanation or from the question they missed. Change the setting and the wording, and never reuse the explanation's defining phrase as the scenario.
+- Make the student use the idea: apply it to a new case, compute with it, or tell it apart from the idea it is most often confused with (for example: which scenario does NOT use it, or why it fits better than a close alternative).
+- Never the same problem, and not the same problem with new numbers when a different setting is possible.
 - ${DIFFICULTY[opts.slot.difficulty]}; ${FACET_TEXT[opts.slot.facet]}.`
   const prompt = `${skillBlock(opts.skill)}
 
@@ -280,7 +284,15 @@ The explanation they just read: ${opts.explanation}`
         system,
         prompt,
         maxOutputTokens,
-        output: Output.object({ schema: questionSchema }),
+        output: Output.object({
+          schema: questionSchema.extend({
+            differsBy: z
+              .string()
+              .describe(
+                'One sentence, not shown to the student: what the problem makes them do beyond the explanation',
+              ),
+          }),
+        }),
       }),
   )
   return output
@@ -294,7 +306,7 @@ const guidedSchema = z.object({
       skillId: z.number(),
       explanation: z
         .string()
-        .describe('4 to 6 sentences: the idea in plain words, how to use it, and one common mistake to avoid'),
+        .describe('At most 100 words: the idea in plain words, how to use it, and one common mistake to avoid'),
       page: z.number().nullable().describe('The page of the material it draws on'),
       quote: z.string().describe('6 to 25 consecutive words copied exactly from that page, or empty'),
     }),

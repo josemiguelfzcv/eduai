@@ -12,7 +12,7 @@ import {
 import { addItems, finishSession, startSession, type NewItem } from '../../lib/server/records'
 import { clientClock } from '../../lib/server/sessions'
 import { POLICY_VERSION, type SkillStateName } from '../../lib/mastery'
-import { toItem } from '../../lib/questions'
+import { plainText, toItem } from '../../lib/questions'
 import { citation } from '../../lib/skill-map'
 import { MIN_QUESTIONS, planQuestions } from '../../lib/study'
 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
               skillId: q.skillId,
               difficulty: q.difficulty,
               facet: q.facet,
-              prompt: e.explanation.trim().slice(0, 3000),
+              prompt: plainText(e.explanation).trim().slice(0, 3000),
               sources: citation(contexts.get(q.skillId)!.excerpts, e.page, e.quote),
             })
           items.push(q)

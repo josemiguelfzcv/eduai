@@ -7,7 +7,10 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Logo } from './Logo'
 import { useFeatures } from './study/client'
+import { HeaderScene } from './learn/LearnPage'
+import { useCourseArt } from './shell/art'
 import { Breadcrumbs } from './shell/Breadcrumbs'
+import { useLocation } from './shell/location'
 import { useShell } from './shell/Shell'
 
 /** Returns the signed-in user, sending visitors without a session back to the landing page. */
@@ -49,13 +52,17 @@ const LOOP_NAV = [
 
 export function AppShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   // Inside a course's learning environment the page draws in its frame, without a second header.
-  // Inside Lyceo's shell the page draws in its main column, under the breadcrumbs, without a header of its own.
+  // Inside Lyceo's shell the page draws in its main column, under the breadcrumbs, without a header of its own. On a
+  // course's page, the course's scene sits behind the top of the page.
   const inShell = useShell()
   if (inShell)
     return (
-      <div className={`px-8 pb-14 pt-5 ${wide ? 'max-w-[76rem]' : 'max-w-[60rem]'}`}>
-        <Breadcrumbs className="mb-6" />
-        {children}
+      <div className="relative px-8 pb-14 pt-5">
+        <CourseScene />
+        <div className={`relative ${wide ? 'max-w-[76rem]' : 'max-w-[60rem]'}`}>
+          <Breadcrumbs className="mb-6" />
+          {children}
+        </div>
       </div>
     )
   return <ClassicShell wide={wide}>{children}</ClassicShell>
@@ -138,4 +145,10 @@ export function LoadingNote({ children }: { children: React.ReactNode }) {
       {children}
     </p>
   )
+}
+
+function CourseScene() {
+  const where = useLocation()
+  const art = useCourseArt()
+  return where.courseId === null ? null : <HeaderScene banner={art.banner(where.courseId)} />
 }

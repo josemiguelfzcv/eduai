@@ -2,7 +2,11 @@
 
 import Link from 'next/link'
 import type { CourseDetail } from '../../lib/academy'
+import type { Banner } from '../../lib/art'
+import { useCourseArt } from '../shell/art'
+import { useEffect } from 'react'
 import { Breadcrumbs } from '../shell/Breadcrumbs'
+import { HEADER, useShell } from '../shell/Shell'
 
 // The frame of the pages inside a course and of Lyceo's own pages (lectures, assignments, materials, the knowledge
 // map, the study plan, progress): breadcrumbs, a header on the page, then the content on paper cards.
@@ -13,6 +17,7 @@ export function LearnPage({
   title,
   description,
   actions,
+  banner,
   children,
 }: {
   detail?: CourseDetail | null
@@ -21,14 +26,19 @@ export function LearnPage({
   title: string
   description?: React.ReactNode
   actions?: React.ReactNode
+  /** The scene behind the header: the course's banner by default on course pages, none when null. */
+  banner?: Banner | null
   children: React.ReactNode
 }) {
   const course = detail?.course
+  const art = useCourseArt()
+  const scene = banner === undefined ? (course ? art.banner(course.id) : null) : banner
   const above =
     kicker === null ? null : (kicker ?? (course ? [course.code, course.name].filter(Boolean).join(', ') : null))
   return (
-    <div className="px-8 pb-14 pt-5">
-      <div className="max-w-[72rem]">
+    <div className="relative px-8 pb-14 pt-5">
+      {scene && <HeaderScene banner={scene} />}
+      <div className="relative max-w-[72rem]">
         <Breadcrumbs className="mb-5" />
         <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div className="min-w-0">
@@ -37,13 +47,39 @@ export function LearnPage({
               {title}
             </h1>
             {description && (
-              <p className="mt-2 max-w-[44rem] text-[0.9rem] leading-relaxed text-ink-soft">{description}</p>
+              <p className="mt-2 max-w-[34rem] text-[0.9rem] leading-relaxed text-ink-soft">{description}</p>
             )}
           </div>
           {actions && <div className="flex flex-wrap gap-2.5">{actions}</div>}
         </header>
         <div className="mt-6 space-y-5">{children}</div>
       </div>
+    </div>
+  )
+}
+
+/** A page's scene: a banner across the top right of the page, fading into it on the left and below. */
+export function HeaderScene({ banner, height = 300 }: { banner: Banner; height?: number }) {
+  // Up behind the top bar, like the view from under the portico; the bar's own landscape steps aside meanwhile.
+  const holdScene = useShell()?.holdScene
+  useEffect(() => holdScene?.(), [holdScene])
+  const fade =
+    'linear-gradient(to right, transparent 0%, #000 34%), linear-gradient(to bottom, #000 62%, transparent 100%)'
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute right-0 w-[66%] select-none overflow-hidden"
+      style={{
+        top: -HEADER,
+        height,
+        maskImage: fade,
+        WebkitMaskImage: fade,
+        maskComposite: 'intersect',
+        WebkitMaskComposite: 'source-in',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={banner.src} alt="" className="h-full w-full object-cover" style={{ objectPosition: banner.position }} />
     </div>
   )
 }

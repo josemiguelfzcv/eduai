@@ -10,6 +10,7 @@ import { ArrowLeftIcon, ArrowRightIcon, ChatIcon, ClockIcon, PlayIcon, SparkleIc
 import { LaurelMark } from './LaurelMark'
 import { SectionBody, type AskAbout } from './LessonDocument'
 import { Breadcrumbs } from '../shell/Breadcrumbs'
+import { HEADER } from '../shell/Shell'
 import { postStream, putKeepalive } from './stream'
 import { useReadingPosition } from './useReadingPosition'
 
@@ -138,20 +139,24 @@ export function LessonView({ view, setView, scrollRef, onAsk, onPractice, onProg
   const [selection, setSelection] = useState<{ top: number; left: number; quote: string; sectionId: string } | null>(
     null,
   )
+  const rootRef = useRef<HTMLDivElement>(null)
   const onSelect = () => {
     const sel = window.getSelection()
     const scroll = scrollRef.current
+    const root = rootRef.current
     const text = sel?.toString().replace(/\s+/g, ' ').trim() ?? ''
-    if (!sel || !scroll || text.length < 3 || !contentRef.current?.contains(sel.anchorNode)) return setSelection(null)
+    if (!sel || !scroll || !root || text.length < 3 || !contentRef.current?.contains(sel.anchorNode))
+      return setSelection(null)
     const rect = sel.getRangeAt(0).getBoundingClientRect()
-    const box = scroll.getBoundingClientRect()
+    const box = root.getBoundingClientRect()
+    const viewTop = scroll.getBoundingClientRect().top + HEADER
     const anchorEl = (
       sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode?.parentElement
     )?.closest<HTMLElement>('[data-section]')
     // Above the selection, or below it when it starts at the top of the view.
-    const above = rect.top - box.top > 56
+    const above = rect.top - viewTop > 56
     setSelection({
-      top: (above ? rect.top - 46 : rect.bottom + 8) - box.top + scroll.scrollTop,
+      top: (above ? rect.top - 46 : rect.bottom + 8) - box.top,
       left: Math.min(Math.max(rect.left - box.left + rect.width / 2, 80), box.width - 80),
       quote: text.slice(0, 1500),
       sectionId: anchorEl?.dataset.section ?? current ?? 's1',
@@ -164,7 +169,7 @@ export function LessonView({ view, setView, scrollRef, onAsk, onPractice, onProg
   const courseId = view.lecture.courseId
 
   return (
-    <div className="relative px-8 pb-12 pt-5" onMouseUp={onSelect} onKeyUp={onSelect}>
+    <div ref={rootRef} className="relative px-8 pb-12 pt-5" onMouseUp={onSelect} onKeyUp={onSelect}>
       <div className="mx-auto max-w-[60rem]">
         <Breadcrumbs className="mb-4" />
         <header>

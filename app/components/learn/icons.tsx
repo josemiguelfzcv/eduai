@@ -187,3 +187,19 @@ export const UploadIcon = (p: IconProps) => (
     <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
   </Icon>
 )
+export const CompassIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m15.5 8.5-2 5-5 2 2-5z" />
+  </Icon>
+)
+export const PencilIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 20l1-4L15.5 5.5a2.1 2.1 0 0 1 3 3L8 19z M13.5 7.5l3 3" />
+  </Icon>
+)
+export const RepeatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" />
+  </Icon>
+)

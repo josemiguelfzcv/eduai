@@ -8,6 +8,7 @@ import { TodayPlan } from '../components/academy/TodayPlan'
 import { LearnPage, Paper } from '../components/learn/LearnPage'
 import { useShell } from '../components/shell/Shell'
 import type { AcademySnapshot } from '../lib/academy'
+import { BANNERS } from '../lib/art'
 import { clockQuery } from '../lib/clock'
 import { getJSON } from '../lib/supabase'
 
@@ -46,6 +47,7 @@ export default function StudyPlanPage() {
   return (
     <LearnPage
       kicker={null}
+      banner={BANNERS[0]}
       title="Your Study Plan"
       description="What to study next across your courses, and why: Lyceo weighs your deadlines and what it has seen you do. Upcoming work sits beside it."
     >

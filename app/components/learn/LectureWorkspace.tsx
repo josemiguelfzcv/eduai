@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useRequiredUser } from '../AppShell'
 import { useCourseWorkspace } from '../shell/academy'
-import { useShell } from '../shell/Shell'
+import { HEADER, useShell } from '../shell/Shell'
 import { startQuickCheck } from '../study/client'
 import { clockQuery } from '../../lib/clock'
 import { ApiError, getJSON } from '../../lib/supabase'
@@ -73,7 +73,7 @@ export function LectureWorkspace({
     const readingNow = () => {
       const scroll = scrollRef?.current
       if (!scroll || !outline?.length) return null
-      const line = scroll.getBoundingClientRect().top + 96
+      const line = scroll.getBoundingClientRect().top + HEADER + 96
       let id = outline[0].id
       for (const el of scroll.querySelectorAll<HTMLElement>('[data-section]')) {
         if (el.getBoundingClientRect().top > line) break

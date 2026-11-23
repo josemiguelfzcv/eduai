@@ -23,7 +23,7 @@ import {
 } from '../learn/icons'
 import { useAcademy } from './academy'
 import { useLocation, type Section } from './location'
-import { courseImage } from './Shell'
+import { useCourseArt } from './art'
 import { usePreferenceSet } from './store'
 
 // The one navigation of Lyceo. Always the same three places, then the student's courses; each course opens into the
@@ -194,6 +194,7 @@ function CourseNav({
 }) {
   const academy = useAcademy()
   const where = useLocation()
+  const art = useCourseArt()
   const detail = academy?.details[course.id]
   const here = where.courseId === course.id
   const base = `/courses/${course.id}`
@@ -218,7 +219,7 @@ function CourseNav({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={courseImage(course.id)}
+            src={art.thumb(course.id)}
             alt=""
             className="size-[46px] shrink-0 rounded-[9px] object-cover ring-1 ring-ivory/15"
           />
@@ -374,6 +375,7 @@ function Dot() {
 export function SidebarRail() {
   const academy = useAcademy()
   const where = useLocation()
+  const art = useCourseArt()
   const item = (active: boolean) =>
     `grid size-11 place-items-center rounded-xl transition-colors ${
       active ? 'bg-ivory/[0.18] text-ivory' : 'text-ivory/80 hover:bg-ivory/[0.08] hover:text-ivory'
@@ -410,7 +412,7 @@ export function SidebarRail() {
             className={`rounded-[11px] p-[3px] ${here ? 'ring-2 ring-gold' : 'hover:ring-1 hover:ring-ivory/40'}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={courseImage(course.id)} alt="" className="size-10 rounded-[8px] object-cover" />
+            <img src={art.thumb(course.id)} alt="" className="size-10 rounded-[8px] object-cover" />
           </Link>
         )
       })}

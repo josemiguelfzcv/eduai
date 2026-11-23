@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { anchorAt, scrollFor, type ReadingAnchor } from '../../lib/written-lesson'
+import { HEADER } from '../shell/Shell'
 
 // Keeps the student's exact place in the lesson. The place is the block at the top of the view and how far into it
 // the view starts, not a pixel offset, so it survives the lesson column changing width (a panel opening or closing,
@@ -20,8 +21,11 @@ type Options = {
   onSave: (anchor: ReadingAnchor) => void
 }
 
-/** The reading line, a few pixels below the top edge, so a block that has all but left the view isn't the place. */
-const LINE = 4
+/**
+ * The reading line: just below the top bar (the page scrolls under it), so a block that has all but left the view
+ * isn't the place.
+ */
+const LINE = HEADER + 4
 
 function measure(scroll: HTMLElement, content: HTMLElement) {
   const base = scroll.getBoundingClientRect().top - scroll.scrollTop
@@ -129,7 +133,7 @@ export function useReadingPosition({ scrollRef, contentRef, storageKey, saved, r
       if (!scroll || !content) return
       anchor.current = { section, block: blockId, offset: 0 }
       const block = measure(scroll, content).find((b) => b.id === blockId)
-      if (block) scroll.scrollTo({ top: Math.max(0, block.top - 24), behavior: 'smooth' })
+      if (block) scroll.scrollTo({ top: Math.max(0, block.top - HEADER - 24), behavior: 'smooth' })
     },
   }
 }

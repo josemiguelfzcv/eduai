@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { useEffect } from 'react'
 import { LearnPage, Paper } from '../components/learn/LearnPage'
 import { useAcademy } from '../components/shell/academy'
-import { courseImage } from '../components/shell/Shell'
+import { useCourseArt } from '../components/shell/art'
 import { StateBar, STATE_COLOR, STATE_ORDER } from '../components/learn/progress'
+import { BANNERS } from '../lib/art'
 import { STATE_LABEL, type SkillStateName } from '../lib/mastery'
 
 // Progress across every course. The same evidence as each course's Knowledge Map and each assignment's progress:
@@ -13,6 +14,7 @@ import { STATE_LABEL, type SkillStateName } from '../lib/mastery'
 
 export default function GlobalProgressPage() {
   const academy = useAcademy()
+  const art = useCourseArt()
   const loadAll = academy?.loadAll
   const courses = academy?.courses
 
@@ -47,6 +49,7 @@ export default function GlobalProgressPage() {
   return (
     <LearnPage
       kicker={null}
+      banner={BANNERS[2]}
       title="Global Progress"
       description="Every idea Lyceo found in your courses, in the state your answers put it in. An idea is confirmed after two right answers on different days, at least one of them a harder question."
     >
@@ -81,7 +84,7 @@ export default function GlobalProgressPage() {
             {rows.map((r) => (
               <li key={r.course.id} className="flex flex-wrap items-center gap-x-5 gap-y-3 py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={courseImage(r.course.id)} alt="" className="size-12 rounded-[10px] object-cover" />
+                <img src={art.thumb(r.course.id)} alt="" className="size-12 rounded-[10px] object-cover" />
                 <div className="min-w-[12rem] flex-1">
                   <Link
                     href={`/courses/${r.course.id}/knowledge-map`}

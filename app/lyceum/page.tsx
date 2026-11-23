@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Breadcrumbs } from '../components/shell/Breadcrumbs'
+import { LANDING } from '../lib/art'
 
 /** The Lyceum: the longer-term vision of a connected world of knowledge. Not built yet, and said so. */
 export default function LyceumPage() {
@@ -12,9 +13,9 @@ export default function LyceumPage() {
         <section className="relative overflow-hidden rounded-[22px] border border-[#ebdfcc] bg-[#fbf4e9] shadow-[0_3px_18px_-8px_rgba(95,65,25,0.2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/learn/banner-temples.webp"
+            src={LANDING.lyceum}
             alt=""
-            className="absolute inset-y-0 right-0 h-full w-[68%] object-cover"
+            className="absolute inset-y-0 right-0 h-full w-[72%] object-cover object-[40%_60%]"
             style={{
               maskImage: 'linear-gradient(to right, transparent, #000 34%)',
               WebkitMaskImage: 'linear-gradient(to right, transparent, #000 34%)',

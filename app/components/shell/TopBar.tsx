@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { HomeIcon, PanelRightIcon, PersonIcon, SearchIcon, SidebarIcon, SignOutIcon, TempleIcon } from '../learn/icons'
 import { LyceoWordmark } from '../learn/LaurelMark'
 import { useAcademy } from './academy'
+import { TOPBAR_SCENE } from '../../lib/art'
 import { SearchDialog } from './Search'
 
 /** The top of every page: the sidebar toggle and the logo, the two places of Lyceo, search, and the student. */
@@ -15,12 +16,18 @@ export function TopBar({
   sidebarWidth,
   onToggleSidebar,
   motion,
+  scene,
+  scrolled,
   ask,
 }: {
   sidebarOpen: boolean
   sidebarWidth: number
   onToggleSidebar: () => void
   motion: string
+  /** The page has its own scene behind the bar, so the bar's own landscape steps aside. */
+  scene: boolean
+  /** The page has scrolled under the bar. */
+  scrolled: boolean
   /** Set while a learning workspace offers Ask Lyceo. */
   ask: { visible: boolean; toggle: () => void } | null
 }) {
@@ -41,8 +48,19 @@ export function TopBar({
   }, [])
 
   return (
-    <header className="relative z-20 flex h-16 shrink-0">
-      <Scenery />
+    <header className="absolute inset-x-0 top-0 z-20 flex h-16">
+      {/* Over the page: clear while the page's own scene shows through, ivory once the page scrolls under. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 transition-[background-color,box-shadow,backdrop-filter] duration-300 ${
+          scrolled
+            ? 'bg-[#f6eee2]/92 shadow-[0_10px_24px_-20px_rgba(60,40,15,0.55)] backdrop-blur-md'
+            : scene
+              ? 'bg-transparent'
+              : 'bg-[#f6eee2]'
+        }`}
+      />
+      {!scene && !scrolled && <Scenery />}
 
       {/* The sidebar's top: its toggle on the green, the logo on a tab of the page. */}
       <div className={`relative flex shrink-0 bg-grove transition-[width] ${motion}`} style={{ width: sidebarWidth }}>
@@ -134,7 +152,7 @@ function HeaderLink({
       className={`relative inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[0.92rem] no-underline transition-colors ${
         active
           ? 'bg-[#efe3cf]/90 font-semibold text-grove after:absolute after:inset-x-3 after:-bottom-[5px] after:h-[2.5px] after:rounded-full after:bg-gold'
-          : 'font-medium text-[#2a2924] hover:bg-[#efe3cf]/60'
+          : 'font-medium text-[#2a2924] hover:bg-[#efe3cf]/70'
       }`}
     >
       {icon}
@@ -143,20 +161,20 @@ function HeaderLink({
   )
 }
 
-/** The hill of temples behind the right of the bar. */
+/** The valley of temples behind the right of the bar, fading into it. */
 function Scenery() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/learn/band-right.webp"
+        src={TOPBAR_SCENE}
         alt=""
-        width={715}
-        height={330}
-        className="absolute right-[6%] top-[-196px] h-[330px] w-[715px] max-w-none opacity-95"
+        width={1400}
+        height={200}
+        className="absolute right-[3%] top-[-34px] h-[112px] w-[784px] max-w-none object-cover opacity-90"
         style={{
-          maskImage: 'linear-gradient(to right, transparent 0%, #000 30%, #000 80%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 30%, #000 80%, transparent 100%)',
+          maskImage: 'linear-gradient(to right, transparent 0%, #000 22%, #000 82%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 22%, #000 82%, transparent 100%)',
         }}
       />
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b from-transparent to-[#f6eee2]" />

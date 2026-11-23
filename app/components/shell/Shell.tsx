@@ -19,8 +19,10 @@ import { useMedia, usePreference } from './store'
 // own scroll. The sidebar folds to a rail and Ask Lyceo folds away, independently; both choices are remembered.
 
 type Shell = {
-  /** The page column's scroll container. */
+  /** The page column's scroll container. Its top runs under the top bar (HEADER pixels). */
   scrollRef: React.RefObject<HTMLDivElement | null>
+  /** A page with a scene of its own (a banner up behind the top bar) holds this while it's shown. */
+  holdScene: () => () => void
   /** Puts Ask Lyceo (or nothing) in the right panel; learning workspaces register it while they're open. */
   setAside: (node: React.ReactNode | null) => void
   openAside: () => void
@@ -32,6 +34,8 @@ const ShellContext = createContext<Shell | null>(null)
 export const useShell = () => useContext(ShellContext)
 
 export const SIDEBAR_OPEN = 252
+/** The top bar's height. Pages scroll under it, so a page's own top starts this far down. */
+export const HEADER = 64
 export const SIDEBAR_RAIL = 76
 
 export function AcademyShell({ children }: { children: React.ReactNode }) {
@@ -42,6 +46,21 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
   // Wide desktops keep Ask Lyceo beside the page; narrower laptop screens open it over the page.
   const wide = useMedia('(min-width: 1280px)')
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [scenes, setScenes] = useState(0)
+  const holdScene = useCallback(() => {
+    setScenes((n) => n + 1)
+    return () => setScenes((n) => n - 1)
+  }, [])
+  // Once the page has scrolled, the top bar sets itself on ivory so it reads over the page.
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => setScrolled(el.scrollTop > 6)
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    return () => el.removeEventListener('scroll', update)
+  }, [])
 
   // No sliding on first paint: the remembered choices apply at once, transitions start after.
   useEffect(() => {
@@ -61,8 +80,8 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', escape)
   }, [overlay, wide])
   const shell = useMemo<Shell>(
-    () => ({ scrollRef, setAside, openAside, closeAside, asideVisible }),
-    [openAside, closeAside, asideVisible],
+    () => ({ scrollRef, holdScene, setAside, openAside, closeAside, asideVisible }),
+    [holdScene, openAside, closeAside, asideVisible],
   )
   const open = sidebar === 'open'
   const motion = animate
@@ -77,6 +96,8 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
           sidebarWidth={open ? SIDEBAR_OPEN : SIDEBAR_RAIL}
           onToggleSidebar={() => setSidebar(open ? 'rail' : 'open')}
           motion={motion}
+          scene={scenes > 0}
+          scrolled={scrolled}
           ask={aside ? { visible: asideVisible, toggle: () => (asideVisible ? closeAside() : openAside()) } : null}
         />
 
@@ -84,7 +105,7 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
           <nav
             id="app-sidebar"
             aria-label="Lyceo"
-            style={{ width: open ? SIDEBAR_OPEN : SIDEBAR_RAIL }}
+            style={{ width: open ? SIDEBAR_OPEN : SIDEBAR_RAIL, marginTop: HEADER }}
             className={`relative z-10 mb-3 shrink-0 overflow-hidden rounded-br-[22px] ${open ? 'rounded-tr-[22px]' : ''} bg-grove text-ivory shadow-[8px_10px_30px_-22px_rgba(20,40,20,0.7)] transition-[width] ${motion}`}
           >
             {open ? <GlobalSidebar /> : <SidebarRail />}
@@ -94,7 +115,8 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
             <div
               ref={scrollRef}
               id="lesson-scroll"
-              className="min-w-0 flex-1 overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,#000_10px)]"
+              style={{ paddingTop: HEADER, scrollPaddingTop: HEADER }}
+              className="min-w-0 flex-1 overflow-y-auto overscroll-contain"
             >
               {children}
             </div>
@@ -117,7 +139,7 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
                 aria-hidden={!asideVisible}
                 inert={!asideVisible}
               >
-                <div className="h-full w-[380px] pb-3 pr-3 2xl:w-[440px]">
+                <div className="h-full w-[380px] pb-3 pr-3 2xl:w-[440px]" style={{ paddingTop: HEADER }}>
                   <div
                     className={`h-full overflow-hidden rounded-[20px] border border-[#ebdfcc] bg-[#fbf4eb] ${
                       wide
@@ -135,14 +157,4 @@ export function AcademyShell({ children }: { children: React.ReactNode }) {
       </div>
     </ShellContext.Provider>
   )
-}
-
-/** A course's picture in the sidebar and on its cards: one of the academy's scenes, the same one every time. */
-export function courseImage(id: number) {
-  return `/learn/course-${'abcde'[Math.abs(id) % 5]}.webp`
-}
-
-/** The scene across the top of a course's pages. */
-export function courseBanner(id: number) {
-  return ['/learn/banner-colonnade.webp', '/learn/banner-temples.webp', '/learn/banner-arches.webp'][Math.abs(id) % 3]
 }

@@ -66,12 +66,18 @@ export function LaurelMark({ size = 28, className = '' }: { size?: number; class
   )
 }
 
-/** Lyceo's wordmark for the learning environment. */
-export function LyceoWordmark({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+/** Lyceo's wordmark: the laurel and the name. `large` is the landing's. */
+export function LyceoWordmark({ tone = 'dark', large = false }: { tone?: 'dark' | 'light'; large?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-2.5 ${tone === 'light' ? 'text-ivory' : 'text-grove'}`}>
-      <LaurelMark size={36} />
-      <span className="font-display text-[1.85rem] font-semibold leading-none tracking-[-0.02em]">Lyceo</span>
+    <span
+      className={`inline-flex items-center ${large ? 'gap-3' : 'gap-2.5'} ${tone === 'light' ? 'text-ivory' : 'text-grove'}`}
+    >
+      <LaurelMark size={large ? 50 : 36} />
+      <span
+        className={`font-display font-semibold leading-none tracking-[-0.02em] ${large ? 'text-[2.5rem]' : 'text-[1.85rem]'}`}
+      >
+        Lyceo
+      </span>
     </span>
   )
 }

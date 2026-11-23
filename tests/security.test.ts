@@ -121,6 +121,13 @@ test('every paid call reserves its cost first', () => {
   }
   const grading = read('app/lib/server/grading.ts')
   assert.equal((grading.match(/generateText\(/g) ?? []).length, (grading.match(/tracked\(/g) ?? []).length)
+  // Written lessons and Ask Lyceo: every call, streamed or not, goes through the same reservation.
+  for (const f of ['app/lib/server/lessons.ts', 'app/lib/server/learning.ts']) {
+    const src = read(f)
+    const count = (re: RegExp) => (src.match(re) ?? []).length
+    assert.equal(count(/generateText\(/g), count(/await tracked\(/g), `${f} has an unreserved generateText`)
+    assert.equal(count(/streamText\(/g), count(/trackedTextStream\(/g), `${f} has an unreserved streamText`)
+  }
 })
 
 test('private uploads and account deletion only run for the signed-in owner', () => {

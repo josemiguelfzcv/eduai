@@ -40,4 +40,5 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
 export const getJSON = <T>(url: string) => request<T>('GET', url)
 export const postJSON = <T>(url: string, body: unknown) => request<T>('POST', url, body)
 export const patchJSON = <T>(url: string, body: unknown) => request<T>('PATCH', url, body)
+export const putJSON = <T>(url: string, body: unknown) => request<T>('PUT', url, body)
 export const deleteJSON = <T>(url: string) => request<T>('DELETE', url)

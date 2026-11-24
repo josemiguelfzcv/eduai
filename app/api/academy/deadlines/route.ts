@@ -9,6 +9,7 @@ import {
   text,
   toDeadline,
 } from '../../../lib/server/academy'
+import { syncSoon } from '../../../lib/server/calendar-sync'
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
         .select(DEADLINE_COLUMNS)
         .single(),
     )
+    syncSoon(db, user.id)
     return NextResponse.json({ deadline: toDeadline(data) })
   } catch (err) {
     return errorResponse(err, 'Could not add the deadline.')

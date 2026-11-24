@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorResponse, HttpError, requireUser, signedInWithin } from '../../../lib/server/auth'
+import { revoke, tokenToRevoke } from '../../../lib/server/calendar'
 import { deleteAllFilesOf } from '../../../lib/server/materials'
 import { markAccountFilesDeleted, serverRecordsEnabled } from '../../../lib/server/records'
 
@@ -21,12 +22,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: REAUTH, reauthenticate: true }, { status: 401 })
     }
 
+    // The calendar connection goes with the account; its token is read first so Google can be told to forget it.
+    const googleToken = await tokenToRevoke(user.id)
     const { error } = await db.rpc('delete_my_account')
     if (error?.code === 'LY010') return NextResponse.json({ error: REAUTH, reauthenticate: true }, { status: 401 })
     if (error?.code === 'PGRST202' || error?.code === '42883') {
       throw new HttpError(404, 'Account deletion is not available yet. Nothing was deleted.')
     }
     if (error) throw error
+
+    if (googleToken) await revoke(googleToken)
 
     let filesPending = false
     try {

@@ -22,11 +22,22 @@ test('the route list is what this audit expects', () => {
   for (const r of routes) assert.ok(handlers(read(r)).length > 0, `${r} exports no handler`)
 })
 
+// Google sends the browser back to the calendar callback without Lyceo's session, so that one route identifies the
+// student by the state the server signed when they started, and only in the browser holding that start's cookie.
+const CALENDAR_CALLBACK = join('app', 'api', 'calendar', 'callback', 'route.ts')
+
 test('every API route checks who is calling', () => {
   for (const r of routes) {
     const src = read(r)
+    if (r === CALENDAR_CALLBACK) continue
     assert.ok(/requireUser\(|optionalUser\(/.test(src), `${r} never authenticates the caller`)
   }
+})
+
+test('the calendar callback accepts only a signed state from the browser that started', () => {
+  const src = read(CALENDAR_CALLBACK)
+  assert.match(src, /readState\(params\.get\('state'\), req\.cookies\.get\(STATE_COOKIE\)\?\.value\)/)
+  assert.match(src, /if \(!userId \|\| !code\) return back\('retry'\)/)
 })
 
 test('routes that act on one record check that it belongs to the caller', () => {

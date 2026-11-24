@@ -9,6 +9,7 @@ import {
   todayFrom,
   toCourse,
 } from '../../../../lib/server/academy'
+import { syncSoon } from '../../../../lib/server/calendar-sync'
 import { learningLoopEnabled, loadLearning } from '../../../../lib/server/learning-data'
 import { courseMaterials } from '../../../../lib/server/lessons'
 import { deleteMaterialFiles } from '../../../../lib/server/materials'
@@ -59,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
         .select('id, name, code, term, created_at')
         .single(),
     )
+    if ('name' in body || 'code' in body) syncSoon(db, user.id)
     return NextResponse.json({ course: toCourse(data) })
   } catch (err) {
     return errorResponse(err, 'Could not update the course.')
@@ -80,6 +82,7 @@ export async function DELETE(req: NextRequest, { params }: Context) {
       }
     }
     rows(await db.from('academy_courses').delete().eq('id', id).eq('user_id', user.id))
+    syncSoon(db, user.id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return errorResponse(err, 'Could not delete the course.')

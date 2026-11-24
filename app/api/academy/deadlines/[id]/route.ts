@@ -9,6 +9,7 @@ import {
   text,
   toDeadline,
 } from '../../../../lib/server/academy'
+import { syncSoon } from '../../../../lib/server/calendar-sync'
 
 type Context = { params: Promise<{ id: string }> }
 
@@ -40,6 +41,7 @@ export async function PATCH(req: NextRequest, context: Context) {
         .maybeSingle(),
     )
     if (!data) throw new HttpError(404, 'That deadline does not exist or is not yours.')
+    syncSoon(db, user.id)
     return NextResponse.json({ deadline: toDeadline(data) })
   } catch (err) {
     return errorResponse(err, 'Could not update the deadline.')
@@ -51,6 +53,7 @@ export async function DELETE(req: NextRequest, context: Context) {
     const { user, db } = await requireUser(req)
     const id = await ownDeadlineId(context)
     rows(await db.from('deadlines').delete().eq('id', id).eq('user_id', user.id))
+    syncSoon(db, user.id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return errorResponse(err, 'Could not delete the deadline.')

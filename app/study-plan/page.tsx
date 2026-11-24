@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bar,
   Card,
@@ -21,6 +21,14 @@ import {
   useStepStarter,
   Waiting,
 } from '../components/academy/board'
+import {
+  busyOnDay,
+  CalendarBanner,
+  CalendarControl,
+  timeRange,
+  useCalendar,
+  usePlacedSteps,
+} from '../components/academy/calendar'
 import { Deadlines } from '../components/academy/Deadlines'
 import { kindLabel } from '../components/academy/format'
 import {
@@ -39,20 +47,34 @@ import { CourseGlyph } from '../components/shell/glyph'
 import { useShell } from '../components/shell/Shell'
 import { lectureHref } from '../components/shell/Sidebar'
 import type { AcademyCourse } from '../lib/academy'
+import type { PlanStep } from '../lib/calendar'
 import { addDays, shortDay } from '../lib/mastery'
 
 // Study Plan, as designed, with what Lyceo really knows: the week on the calendar (the classes whose lectures have a
 // date, and what is due), today's steps in order with the reason for each, the deadlines, how the student learns and
-// where the plan's time goes. Lyceo doesn't keep study sessions with clock times yet, so the week shows days, not hours.
+// where the plan's time goes. With Google Calendar connected, the week also shows when the student is busy, and
+// today's steps get times in their free time, which they can put on their calendar.
 
 const DESCRIPTION = 'Organize your week and distribute study time intelligently across your courses and commitments.'
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const PACE = { gentle: 'Smaller steps', steady: 'Steady', brisk: 'Brisk' } as const
+const SMALL_BUTTON =
+  'shrink-0 rounded-[8px] bg-[#1f4a2c] px-3.5 py-[6px] text-[0.84rem] font-medium text-ivory transition-colors hover:bg-[#173d22] disabled:opacity-60'
 
 /** The Monday of the week holding a day, moved by whole weeks. */
 function weekStart(day: string, offset: number) {
   const weekday = (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7
   return addDays(day, 7 * offset - weekday)
+}
+
+/** The days whose busy times the page needs: the week shown and, when it's near, today (for today's plan). */
+function calendarDays(today: string | null, start: string | null) {
+  if (!today || !start) return null
+  const end = addDays(start, 7)
+  const from = today < start ? today : start
+  const to = today >= end ? addDays(today, 1) : end
+  const span = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000
+  return span <= 14 ? { from, to } : { from: start, to: end }
 }
 
 export default function StudyPlanPage() {
@@ -61,6 +83,18 @@ export default function StudyPlanPage() {
   const { courses, details } = useAllCourses()
   const starter = useStepStarter()
   const [offset, setOffset] = useState(0)
+  const today = snapshot?.today ?? null
+  const shownStart = today ? weekStart(today, offset) : null
+  const calendar = useCalendar(useMemo(() => calendarDays(today, shownStart), [today, shownStart]))
+  const steps = useMemo<PlanStep[]>(() => {
+    const known = courses ?? snapshot?.courses ?? []
+    return (snapshot?.plan ?? []).map((a) => {
+      const c = known.find((k) => k.id === a.courseId)
+      return { key: a.key, title: a.title, minutes: a.minutes, course: c ? courseTitle(c) : a.courseName }
+    })
+  }, [snapshot, courses])
+  const placed = usePlacedSteps(calendar, today ?? '', steps)
+  const [added, setAdded] = useState<string | null>(null)
 
   if (!shell)
     return (
@@ -90,7 +124,7 @@ export default function StudyPlanPage() {
     )
 
   const list: AcademyCourse[] = courses ?? snapshot.courses
-  const today = snapshot.today
+  const thisDay = snapshot.today
   const hue = courseHues(list)
   const course = (id: number | null) => list.find((c) => c.id === id) ?? null
   const codeOf = (id: number | null, fallback: string | null) => {
@@ -110,7 +144,7 @@ export default function StudyPlanPage() {
   )
 
   // The week on the calendar: classes (lectures with a date) and what is due, day by day.
-  const start = weekStart(today, offset)
+  const start = weekStart(thisDay, offset)
   const days = WEEKDAYS.map((name, i) => {
     const day = addDays(start, i)
     const classes = list.flatMap((c) =>
@@ -120,6 +154,30 @@ export default function StudyPlanPage() {
     )
     return { name, day, classes, due: snapshot.deadlines.filter((d) => d.dueOn === day) }
   })
+  const timeOf = new Map(
+    (placed?.sessions ?? []).flatMap((session) =>
+      session.steps.map((t) => [t.key, timeRange(Date.parse(t.start), Date.parse(t.end), calendar.timeZone)] as const),
+    ),
+  )
+  const placedKey = placed?.sessions.map((session) => `${session.start}/${session.end}`).join('|') ?? ''
+  const busyByDay = Object.fromEntries(
+    days.map((d) => [d.day, busyOnDay(calendar.busy, d.day, addDays(d.day, 1), calendar.timeZone)]),
+  )
+  /** A day's busy times (at most four shown) and, today, the study sessions placed between them, in time order. */
+  const timesOn = (day: string) => {
+    const busy = busyByDay[day] ?? []
+    return [
+      ...busy
+        .slice(0, busy.length > 4 ? 3 : 4)
+        .map((b) => ({ study: false, start: b.start, label: b.label, title: '' })),
+      ...(day === thisDay ? (placed?.sessions ?? []) : []).map((session) => ({
+        study: true,
+        start: Date.parse(session.start),
+        label: timeRange(Date.parse(session.start), Date.parse(session.end), calendar.timeZone),
+        title: session.steps.map((t) => t.title).join(' · '),
+      })),
+    ].sort((a, b) => a.start - b.start)
+  }
   const weekClasses = days.flatMap((d) => d.classes)
   const weekDue = days.flatMap((d) => d.due)
 
@@ -133,6 +191,7 @@ export default function StudyPlanPage() {
 
   return (
     <ModulePage title="Study Plan" description={DESCRIPTION}>
+      <CalendarBanner calendar={calendar} />
       <StatStrip>
         <Stat icon={<ClockIcon size={34} />} value={minutesLabel(minutes)} label="In your plan" />
         <Stat
@@ -160,41 +219,68 @@ export default function StudyPlanPage() {
           title="Your week"
           subtitle="Classes and deadlines on your calendar."
           action={
-            <div className="flex items-center gap-1 rounded-[10px] border border-ivory/35 px-1 py-[3px] text-[0.9rem] text-ivory">
-              <button
-                type="button"
-                onClick={() => setOffset((n) => n - 1)}
-                aria-label="The week before"
-                className="grid size-7 place-items-center rounded-md hover:bg-ivory/[0.12]"
-              >
-                <ArrowLeftIcon size={16} />
-              </button>
-              <span className="min-w-[8.2rem] text-center">
-                {shortDay(start)} – {shortDay(addDays(start, 6))}
-              </span>
-              <button
-                type="button"
-                onClick={() => setOffset((n) => n + 1)}
-                aria-label="The week after"
-                className="grid size-7 place-items-center rounded-md hover:bg-ivory/[0.12]"
-              >
-                <ArrowRightIcon size={16} />
-              </button>
+            <div className="flex items-center gap-2">
+              <CalendarControl calendar={calendar} />
+              <div className="flex items-center gap-1 rounded-[10px] border border-ivory/35 px-1 py-[3px] text-[0.9rem] text-ivory">
+                <button
+                  type="button"
+                  onClick={() => setOffset((n) => n - 1)}
+                  aria-label="The week before"
+                  className="grid size-7 place-items-center rounded-md hover:bg-ivory/[0.12]"
+                >
+                  <ArrowLeftIcon size={16} />
+                </button>
+                <span className="min-w-[8.2rem] text-center">
+                  {shortDay(start)} – {shortDay(addDays(start, 6))}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOffset((n) => n + 1)}
+                  aria-label="The week after"
+                  className="grid size-7 place-items-center rounded-md hover:bg-ivory/[0.12]"
+                >
+                  <ArrowRightIcon size={16} />
+                </button>
+              </div>
             </div>
           }
         >
           <div className="grid min-h-[238px] grid-cols-7 divide-x divide-[#ece2d1]">
             {days.map((d) => (
-              <div key={d.day} className={`min-w-0 px-1.5 pb-3 pt-2.5 ${d.day === today ? 'bg-[#f1eedb]/70' : ''}`}>
+              <div key={d.day} className={`min-w-0 px-1.5 pb-3 pt-2.5 ${d.day === thisDay ? 'bg-[#f1eedb]/70' : ''}`}>
                 <p className="m-0 text-center leading-tight">
                   <span className="block font-display text-[1.02rem] font-semibold text-[#1d1c19]">{d.name}</span>
                   <span
-                    className={`block text-[0.8rem] ${d.day === today ? 'font-semibold text-[#1f4a2c]' : 'text-[#4b4a43]'}`}
+                    className={`block text-[0.8rem] ${d.day === thisDay ? 'font-semibold text-[#1f4a2c]' : 'text-[#4b4a43]'}`}
                   >
-                    {d.day === today ? 'Today' : shortDay(d.day)}
+                    {d.day === thisDay ? 'Today' : shortDay(d.day)}
                   </span>
                 </p>
                 <ul className="m-0 mt-2.5 list-none space-y-1.5 p-0">
+                  {timesOn(d.day).map((slot) =>
+                    slot.study ? (
+                      <li
+                        key={`study-${slot.start}`}
+                        title={slot.title}
+                        className="rounded-[7px] border-l-[3px] border-[#1f6d38] bg-[#e4efe0] px-1.5 py-[5px] text-[0.76rem] leading-[1.25] text-[#173d22]"
+                      >
+                        <span className="block font-semibold">Study</span>
+                        <span className="block">{slot.label}</span>
+                      </li>
+                    ) : (
+                      <li
+                        key={`busy-${slot.start}`}
+                        title={`Busy ${slot.label}`}
+                        className="rounded-[7px] bg-[#ece6db] px-1.5 py-[4px] text-[0.74rem] leading-[1.25] text-[#4b4a43]"
+                      >
+                        <span className="sr-only">Busy </span>
+                        {slot.label}
+                      </li>
+                    ),
+                  )}
+                  {(busyByDay[d.day]?.length ?? 0) > 4 && (
+                    <li className="px-1.5 text-[0.74rem] text-[#5b5a52]">+{busyByDay[d.day].length - 3} more busy</li>
+                  )}
                   {d.classes.map(({ course: c, lecture }) => (
                     <li key={lecture.id}>
                       <Link
@@ -251,7 +337,18 @@ export default function StudyPlanPage() {
                 </span>
               </>
             ) : (
-              'Nothing on the calendar this week. Lectures with a date and your deadlines show here.'
+              'No classes or deadlines this week. Lectures with a date and your deadlines show here.'
+            )}
+            {calendar.busy && (
+              <span className="inline-flex items-center gap-2 text-[#5b5a52]">
+                <span className="h-2.5 w-4 rounded-sm bg-[#ece6db]" aria-hidden="true" />
+                Busy, from Google Calendar
+              </span>
+            )}
+            {calendar.busyProblem && (
+              <span role="alert" className="text-terracotta">
+                {calendar.busyProblem}
+              </span>
             )}
           </p>
         </FeatureCard>
@@ -259,7 +356,7 @@ export default function StudyPlanPage() {
         <Card
           icon={<CalendarIcon size={30} />}
           title="Today’s plan"
-          subtitle={`Your ${plan.length} ${plan.length === 1 ? 'step' : 'steps'} for ${new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}.`}
+          subtitle={`Your ${plan.length} ${plan.length === 1 ? 'step' : 'steps'} for ${new Date(`${thisDay}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}.`}
         >
           {plan.length ? (
             <ol className="m-0 list-none divide-y divide-[#ece2d1] p-0">
@@ -284,6 +381,9 @@ export default function StudyPlanPage() {
                       </span>
                       <span className="block truncate text-[0.86rem] leading-[1.35] text-[#4b4a43]">
                         {starter.busy === a.key ? 'Writing your questions' : codeOf(a.courseId, a.courseName)}
+                        {starter.busy !== a.key && timeOf.get(a.key) && (
+                          <span className="font-medium text-[#1f4a2c]"> · {timeOf.get(a.key)}</span>
+                        )}
                       </span>
                     </span>
                     <Tag tone="stone">{a.minutes} min</Tag>
@@ -293,6 +393,61 @@ export default function StudyPlanPage() {
             </ol>
           ) : (
             <EmptyNote>Nothing is planned for today. Add a lecture or a deadline and Lyceo plans from it.</EmptyNote>
+          )}
+          {calendar.status?.configured && plan.length > 0 && (
+            <div className="mt-3 flex items-center gap-4 border-t border-[#ece2d1] pt-3 text-[0.88rem] leading-snug text-[#4b4a43]">
+              {!calendar.live ? (
+                <>
+                  <span className="min-w-0 flex-1">
+                    {calendar.status.expired
+                      ? 'Your Google Calendar connection expired. Reconnect it and Lyceo fits these steps into your free time.'
+                      : 'Connect Google Calendar and Lyceo fits these steps into your free time.'}
+                  </span>
+                  <button
+                    type="button"
+                    className={SMALL_BUTTON}
+                    onClick={calendar.connect}
+                    disabled={calendar.working === 'connect'}
+                  >
+                    {calendar.working === 'connect'
+                      ? 'Opening Google'
+                      : calendar.status.expired
+                        ? 'Reconnect'
+                        : 'Connect'}
+                  </button>
+                </>
+              ) : !calendar.status.canSeeBusy ? (
+                <span>Lyceo can’t see when you’re busy. Disconnect and connect again, allowing both options.</span>
+              ) : !placed ? (
+                <span>{calendar.busyProblem ?? 'Reading your calendar'}</span>
+              ) : (
+                <>
+                  <span className="min-w-0 flex-1">
+                    {placed.sessions.length
+                      ? `${placed.sessions.length} ${placed.sessions.length === 1 ? 'session' : 'sessions'} in your free time, between 8 AM and 10 PM.`
+                      : 'No free time left today between 8 AM and 10 PM.'}
+                    {placed.unplaced.length > 0 &&
+                      ` ${placed.unplaced.length} ${placed.unplaced.length === 1 ? 'step doesn’t' : 'steps don’t'} fit today.`}
+                  </span>
+                  {calendar.status.canWrite && placed.sessions.length > 0 && (
+                    <button
+                      type="button"
+                      className={SMALL_BUTTON}
+                      disabled={calendar.working === 'sessions' || added === placedKey}
+                      onClick={async () => {
+                        if (await calendar.addSessions(thisDay, placed.sessions)) setAdded(placedKey)
+                      }}
+                    >
+                      {calendar.working === 'sessions'
+                        ? 'Adding'
+                        : added === placedKey
+                          ? 'On your calendar'
+                          : 'Add to Google Calendar'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </Card>
       </div>

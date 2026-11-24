@@ -58,7 +58,8 @@ export function DeleteAccount({ startOpen = false }: { startOpen?: boolean }) {
       </h2>
       <p className="mt-2 max-w-[62ch] text-[0.95rem] text-ink-soft">
         This deletes your profile, courses, deadlines, lessons, uploaded files, ideas, Quick Checks and every answer
-        you’ve given. Records of what the AI calls cost stay, with nothing that links them to you. It can’t be undone.{' '}
+        you’ve given, and disconnects Google Calendar. Records of what the AI calls cost stay, with nothing that links
+        them to you. It can’t be undone.{' '}
         <Link href="/privacy" className="text-forest underline underline-offset-4">
           What Lyceo keeps
         </Link>

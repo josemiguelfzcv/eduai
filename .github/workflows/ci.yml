@@ -31,6 +31,8 @@ jobs:
       LYCEO_MATERIALS_R2_ACCESS_KEY_ID: ci-sentinel-mat-access-3f8c20
       LYCEO_MATERIALS_R2_SECRET_ACCESS_KEY: ci-sentinel-mat-secret-b71d04
       LYCEO_MATERIALS_BUCKET: ci-materials
+      GOOGLE_CALENDAR_CLIENT_SECRET: ci-sentinel-gcal-secret-92c4e1
+      CALENDAR_TOKEN_KEY: ci-sentinel-gcal-key-0d7b35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

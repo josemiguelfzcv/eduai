@@ -26,8 +26,16 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: 'Services that handle it',
     body: [
-      'Supabase stores your account and your study records. Cloudflare R2 stores your files. Vercel runs the app.',
+      'Supabase stores your account and your study records. Cloudflare R2 stores your files. Vercel runs the app. Google Calendar, if you connect it, holds the Lyceo calendar.',
       'Anthropic’s Claude reads the text of your material, and your answers, to find ideas, write questions and explanations, and grade answers.',
+    ],
+  },
+  {
+    title: 'Google Calendar, if you connect it',
+    body: [
+      'Lyceo asks Google for two things only: to see when you’re busy (the times, never what your events are) and to keep one calendar of its own, called Lyceo, with your open deadlines and the study sessions you choose to add. It can’t see or change any of your other calendars.',
+      'It keeps the permission Google gives it, encrypted, with the Google account’s email address. Your busy times are read when you open the Study Plan and are not stored.',
+      'Disconnect it from the Study Plan and Lyceo asks Google to cancel the permission and forgets it. The Lyceo calendar stays in your Google account until you delete it there.',
     ],
   },
   {
@@ -35,7 +43,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       'Delete a material and its file is gone; the ideas it added and your answers stay in the course.',
       'Delete a course and its materials, ideas, Quick Checks and answers go with it.',
-      'Delete your account (Profile, at the bottom) and everything above is deleted. The cost records stay, with nothing that links them to you. Uploads you started but never finished are removed within a day.',
+      'Delete your account (Profile, at the bottom) and everything above is deleted, and Google Calendar is disconnected. The cost records stay, with nothing that links them to you. Uploads you started but never finished are removed within a day.',
     ],
   },
 ]
